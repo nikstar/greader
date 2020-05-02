@@ -54,7 +54,7 @@ const handleSingleSubscription = async (ctx: ContextMessageUpdate, url: string) 
     str += '\nLatest post:'
     await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, str, { parse_mode: 'HTML', disable_web_page_preview: false })
     await db.query(
-      'INSERT INTO subscriptions ("user", feed, last_sent) VALUES ($1, $2, now()) ON CONFLICT ("user", feed) DO UPDATE SET last_sent = EXCLUDED.last_sent',
+      'INSERT INTO subscriptions (user_id, feed, last_sent) VALUES ($1, $2, now()) ON CONFLICT (user_id, feed) DO UPDATE SET last_sent = EXCLUDED.last_sent',
       [ctx.chat.id, feed.feedUrl || url]
       )
   } catch(err) {
