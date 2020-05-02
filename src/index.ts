@@ -28,10 +28,10 @@ bot.start(handleStart)
 bot.command('export', handleExport)
 bot.command('list', handleList)
 bot.command('subscribe', handleSubscribe)
-bot.action(/^subscribe:(.+)/, handleResubscribe)
-
+bot.action(/^resubscribe:(.+)/, handleResubscribe)
 
 bot.command('unsubscribe', handleUnsubscribe)
+bot.command('u', handleUnsubscribe)
 
 bot.on('text', handleSubscribe)
 

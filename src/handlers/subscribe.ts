@@ -1,5 +1,5 @@
 import { ContextMessageUpdate } from 'telegraf'
-import { db } from '../db'
+import { db, getSubscription } from '../db'
 import { fetchFeed } from '../crawler'
 import axios from 'axios'
 import cheerio from 'cheerio'
@@ -54,7 +54,7 @@ const handleSingleSubscription = async (ctx: ContextMessageUpdate, url: string) 
     str += '\nLatest post:'
     await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, str, { parse_mode: 'HTML', disable_web_page_preview: false })
     await db.query(
-      'INSERT INTO subscriptions (user_id, feed, last_sent) VALUES ($1, $2, now()) ON CONFLICT (user_id, feed) DO UPDATE SET last_sent = EXCLUDED.last_sent',
+      'INSERT INTO subscriptions (user_id, feed, last_sent, active) VALUES ($1, $2, now(), true) ON CONFLICT (user_id, feed) DO UPDATE SET last_sent = EXCLUDED.last_sent, active = true',
       [ctx.chat.id, feed.feedUrl || url]
       )
   } catch(err) {
@@ -79,7 +79,13 @@ export const handleSubscribe = async (ctx: Ctx) => {
 }
 
 export const handleResubscribe = async (ctx: Ctx) => { 
-  const url = ctx.match[1]
-  ctx.answerCbQuery(`Resubscribing to ${url}`)
-  handleSingleSubscription(ctx, url)
+  try {
+    const id = ctx.match[1]
+    const url = await getSubscription(id)
+    ctx.answerCbQuery(`Resubscribing to ${url}`)
+    handleSingleSubscription(ctx, url)
+  } catch(err) {
+    console.log(`hanleResubscribe: ${err}`)
+    ctx.answerCbQuery(`Failed to resubscribe`)
+  }
 }
