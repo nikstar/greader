@@ -18,7 +18,7 @@
     "cheerio": "^1.0.0-rc.3",
     "cron": "^1.8.2",
     "pg": "^8.0.0",
-    "rss-parser": "^3.7.6",
+    "rss-parser": "^3.8.0",
     "telegraf": "^3.37.0",
     "telegraf-i18n": "^6.6.0",
     "telegraf-session-postgresql": "^1.0.3",

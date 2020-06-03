@@ -5,6 +5,9 @@ export const fetchFeed = async (url: string) => {
   const parser = new Parser({
     customFields: { 
       item: [ 'id', 'url', 'link' ] 
+    },
+    requestOptions: {
+      rejectUnauthorized: false
     }
   })
   const feed = await parser.parseURL(url)
