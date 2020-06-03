@@ -1,7 +1,7 @@
 import { db } from './db'
 import Parser from 'rss-parser'
 
-export const fetchFeed = async (url: string) => {
+export const fetchFeed = async (feedURL: string) => {
   const parser = new Parser({
     customFields: { 
       item: [ 'id', 'url', 'link' ] 
@@ -10,19 +10,26 @@ export const fetchFeed = async (url: string) => {
       rejectUnauthorized: false
     }
   })
-  const feed = await parser.parseURL(url)
+  const feed = await parser.parseURL(feedURL)
   
-  const most_recent_item = feed.items.map(item => item.isoDate).reduce((prev, cur) => cur > prev ? cur : prev)
+  const mostRecentItemDate = feed.items.map(item => item.isoDate).reduce((prev, cur) => cur > prev ? cur : prev)
   const res = await db.query(
-    'INSERT INTO feeds (url, title, last_update_time, next_update_time, most_recent_item) VALUES ($1, $2, now(), now() + interval \'10 minutes\', $3) ON CONFLICT ("url") DO UPDATE SET title = EXCLUDED.title, last_update_time = EXCLUDED.last_update_time, next_update_time = EXCLUDED.next_update_time, most_recent_item = EXCLUDED.most_recent_item;', 
-    [url, feed.title, most_recent_item] 
+    'INSERT INTO feeds (url, title, last_update_time, next_update_time, most_recent_item) VALUES ($1, $2, now(), now() + interval \'5 minutes\', $3) ON CONFLICT ("url") DO UPDATE SET title = EXCLUDED.title, last_update_time = EXCLUDED.last_update_time, next_update_time = EXCLUDED.next_update_time, most_recent_item = EXCLUDED.most_recent_item;', 
+    [feedURL, feed.title, mostRecentItemDate] 
   )
-  console.log('Crawler: crawlFeed: ' + url + ' updating items: ' + feed.items.length)
+  console.log(`feedURL = ${feedURL} count = ${res.rowCount}`)
+  console.log(`Crawler: crawlFeed: ${feedURL} updating items: ${feed.items.length}`)
   feed.items.slice(0, 10).forEach(async item => {
-    await db.query(
+    if (feedURL == '/') {
+      throw Error("crawler: feedURL is '/'");
+    }
+    const res = await db.query(
       'INSERT INTO feed_items (guid, title, url, date, feed) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING;',
-      [item.guid || item.id || item.url, item.title, item.link || item.url, item.isoDate, url]
+      [item.guid || item.id || item.url, item.title, item.link || item.url, item.isoDate, feedURL]
     )
+    if (res.rowCount > 0) {
+      console.log(`Crawler: found new item: ${feedURL} ${item.link || item.url}`)
+    }
   })
   return feed;
 }
