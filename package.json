@@ -5,7 +5,7 @@
   "main": "index.ts",
   "scripts": {
     "build": "tsc",
-    "start": "npm run-script build && env BOT_TOKEN=681050161:AAF45hVY04IO93YjoBb5mQjEcMfm1GxLhmw PGDATABASE=reader PGUSER=nikstar node .build/index.js"
+    "start": "npm run-script build && node -r dotenv/config .build/index.js"
   },
   "repository": {
     "type": "git",
@@ -34,6 +34,7 @@
     "@types/pg": "^7.14.3",
     "@types/xml2js": "^0.4.5",
     "@types/xmldom": "^0.1.29",
+    "dotenv": "^8.2.0",
     "node-html-parser": "^1.2.14",
     "typescript": "^3.8.3"
   }
