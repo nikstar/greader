@@ -12,11 +12,9 @@ const findFeed = async (urlString: string) => {
   let url = new URL(urlString)
   
   try {
-    console.log('Subscribing: got url: ' + url)
     const feed = await fetchFeed(url.toString())
     return { url: url.toString(), feed: feed }
   } catch(err) {
-    console.log('Subscribing: catch: ' + err) 
     try {
       const data = (await axios.get(url.toString())).data
       const html = cheerio.load(data)
@@ -47,22 +45,22 @@ const handleSingleSubscription = async (ctx: ContextMessageUpdate, url: string) 
     const resp = await findFeed(url)
     url = resp.url
     const feed = resp.feed
-    let str = '<a href="' + (feed.items[0].link || feed.items[0].url) + '">\u{2060}</a>' + 'Subscribed to <b><a href="' + feed.link + '">' + feed.title + '</a></b>\n\nRecent posts:\n'
+    let str = `<a href="${feed.items[0].link || feed.items[0].url}">⁠</a>Subscribed to <b><a href="${feed.link}">${feed.title}</a></b>\n\nRecent posts:\n`
     feed.items.slice(0, 10).forEach(item => {
-      str += '→ <a href="' + (item.link || item.url) + '">' + item.title + '</a>\n'
+      str += `→ <a href="${item.link || item.url}">${item.title}</a>\n`
     })
     str += '\nLatest post:'
     await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, str, { parse_mode: 'HTML', disable_web_page_preview: false })
     await db.query(
       'INSERT INTO subscriptions (user_id, feed, last_sent, active) VALUES ($1, $2, now(), true) ON CONFLICT (user_id, feed) DO UPDATE SET last_sent = EXCLUDED.last_sent, active = true',
-      [ctx.chat.id, feed.feedUrl || url]
+      [ctx.chat.id, url]
       )
   } catch(err) {
     db.query(
-      'INSERT INTO bad_feeds (url, comment) VALUES ($1, $2);',
-      [url, err.toString()]
+      'INSERT INTO bad_feeds (user_id, url, comment) VALUES ($1, $2, $3);',
+      [ctx.chat.id, url, err.toString()]
     )
-    ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, 'Could not load ' + url + '\n' + err)
+    ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, `'Could not load ${url}. Try sending a direct link to the feed`)
   }
 }
   
