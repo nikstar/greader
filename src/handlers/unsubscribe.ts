@@ -1,4 +1,4 @@
-import { disableSubscribtion, getFeedForItemUrl } from '../db'
+import * as DB from '../db'
 import Ctx from '../ctx'
 import { Extra, Markup } from 'telegraf'
 import { url } from 'inspector'
@@ -6,7 +6,7 @@ import { url } from 'inspector'
 const handleSingleUnsubscription = async (ctx: Ctx, url: string): Promise<boolean> => {
   console.log(`Unsubscribing ${ctx.chat.id} from ${url}`)
   try {
-    const id = await disableSubscribtion(ctx.chat.id, url)
+    const id = await DB.subscriptions.updateInactive(ctx.chat.id, url)
     const extra = Markup
       .inlineKeyboard([
         Markup.callbackButton('Resubscribe', `resubscribe:${id}`, false)
@@ -25,7 +25,7 @@ const handleUnsubscriptionReply = async (ctx: Ctx, url: string): Promise<boolean
   console.log(`trying to find subscription for ${url}`)
   // todo: this does not neccessarily uniquely identify the subscribtion - what is better? keep track of ids for messages?
   try {
-    const feedUrl = await getFeedForItemUrl(url)
+    const feedUrl = await DB.feedItems.selectFeedForItemUrl(url)
     return await handleSingleUnsubscription(ctx, feedUrl)
   } catch(err) {
     console.log(`reply error: ${err}`)

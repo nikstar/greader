@@ -1,12 +1,9 @@
-
-import Telegraf, { Markup, Extra } from 'telegraf'
-import { job, CronJob } from 'cron'
-import { db } from './db'
+import Telegraf from 'telegraf'
+import { job } from 'cron'
 import { handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe } from './handlers'
 import { fetchAll } from './crawler'
 import { updateAll } from './updater'
 import PostgreSQLSession from 'telegraf-session-postgresql'
-import Ctx from './ctx'
 import { handleResubscribe } from './handlers/subscribe'
 
 const bot = new Telegraf(process.env.BOT_TOKEN)

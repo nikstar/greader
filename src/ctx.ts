@@ -1,5 +1,4 @@
 import { ContextMessageUpdate } from 'telegraf'
-import db from './db'
 
 export class Session {
   counter: number

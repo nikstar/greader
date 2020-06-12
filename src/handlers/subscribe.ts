@@ -1,11 +1,12 @@
 import { ContextMessageUpdate } from 'telegraf'
-import { db, getSubscription } from '../db'
+import * as DB from '../db'
 import { fetchFeed } from '../crawler'
 import axios from 'axios'
 import cheerio from 'cheerio'
 import Parser from 'rss-parser'
 import Ctx from '../ctx'
 //import URL from 'url'
+
 
 const findFeed = async (urlString: string) => {
   if (!urlString.match('^https?://')) { urlString = 'https://' + urlString }
@@ -51,15 +52,9 @@ const handleSingleSubscription = async (ctx: ContextMessageUpdate, url: string) 
     })
     str += '\nLatest post:'
     await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, str, { parse_mode: 'HTML', disable_web_page_preview: false })
-    await db.query(
-      'INSERT INTO subscriptions (user_id, feed, last_sent, active) VALUES ($1, $2, now(), true) ON CONFLICT (user_id, feed) DO UPDATE SET last_sent = EXCLUDED.last_sent, active = true',
-      [ctx.chat.id, url]
-      )
+    await DB.subscriptions.insertNewOrUpdateLastSent(ctx.chat.id, url)
   } catch(err) {
-    db.query(
-      'INSERT INTO bad_feeds (user_id, url, comment) VALUES ($1, $2, $3);',
-      [ctx.chat.id, url, err.toString()]
-    )
+    await DB.badFeeds.insert(ctx.chat.id, url, err)
     ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, `'Could not load ${url}. Try sending a direct link to the feed`)
   }
 }
@@ -79,7 +74,7 @@ export const handleSubscribe = async (ctx: Ctx) => {
 export const handleResubscribe = async (ctx: Ctx) => { 
   try {
     const id = ctx.match[1]
-    const url = await getSubscription(id)
+    const url = await DB.subscriptions.selectURLForID(id)
     ctx.answerCbQuery(`Resubscribing to ${url}`)
     handleSingleSubscription(ctx, url)
   } catch(err) {
