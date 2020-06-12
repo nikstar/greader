@@ -1,17 +1,12 @@
-import { ContextMessageUpdate } from 'telegraf'
 import * as DB from '../db'
+import Ctx from '../ctx'
 
-export const handleStart = async (ctx: ContextMessageUpdate) => { 
-
-  const msg = await ctx.reply('Welcome!')
-  const res = await DB.users.select(ctx.chat.id)
-  if (res.rowCount == 0) {
-    const str = 'Welcome, ' + ctx.from.first_name + '!\n\nSend me links to RSS feeds and I will follow them.'
-    ctx.tg.editMessageText(ctx.chat.id, msg.message_id, null, str)
-    await DB.users.insert(ctx.chat.id)
-  } else {
-    const str = 'Welcome back, ' + ctx.from.first_name + '!\n\nSend me links to RSS feeds and I will follow them.'
-    ctx.tg.editMessageText(ctx.chat.id, msg.message_id, null, str)
+export const handleStart = async (ctx: Ctx) => { 
+  let str = `Welcome`
+  if (ctx.from.first_name && ctx.from.first_name.length > 1) {
+    str += `, ${ctx.from.first_name}`
   }
-
+  str += `!\n\nSend me links and I will follow them for you.`
+  await ctx.reply(str)
+  await DB.users.insert(ctx.chat.id)
 }

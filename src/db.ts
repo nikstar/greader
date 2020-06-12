@@ -8,22 +8,20 @@ class Table {
 }
 
 class UsersTable extends Table {
-  async select(chat_id: string|number) {
-    const res = await dbClient.query(`select * from users where chat_id = $1`, [chat_id])
-    console.log(res)
-    return res
-  }
-
   async insert(chat_id: string|number) {
-    const res = await dbClient.query('INSERT INTO users (chat_id) VALUES ($1);', [chat_id])
-    console.log(res)
+    await dbClient.query(`
+      INSERT INTO users (chat_id) 
+      VALUES ($1) 
+      ON CONFLICT DO NOTHING;`, 
+      [chat_id]
+    )
   }
 }
 
 class SubscriptionsTable extends Table {
   async insertNewOrUpdateLastSent(chat_id: string|number, url: string) {
     console.log(`feeds.insertNewOrUpdateMostRecent url=${url}`)
-    const res = await dbClient.query(`
+    await dbClient.query(`
       INSERT INTO subscriptions (user_id, feed, last_sent, active) 
       VALUES                    ($1,      $2,   now(),     true  ) 
       ON CONFLICT (user_id, feed) DO 
@@ -32,7 +30,6 @@ class SubscriptionsTable extends Table {
           active = true`,
       [chat_id, url]
     )
-    console.log(res)
   }
 
   async selectSubscriptionsForUser(id: string|number) {
@@ -56,13 +53,12 @@ class SubscriptionsTable extends Table {
   }
 
   async updateLastSent(chat_id: string|number, feedURL: string, date: string) {
-    const res = await dbClient.query(`
+    await dbClient.query(`
       UPDATE subscriptions 
       SET last_sent = $1 
       WHERE user_id = $2 AND feed = $3;`,
       [date, chat_id, feedURL]
     )
-    console.log(res)
   }
 
   async updateInactive(chat_id: string|number, url: string): Promise<number> {
@@ -79,11 +75,8 @@ class SubscriptionsTable extends Table {
 
 class FeedsTable extends Table {
   async insertNewOrUpdateMostRecent(url: string, title: string, mostRecentItemDate: string) {
-    if (url == '/') {
-      console.log(url)
-    }
     console.log(`feeds.insertNewOrUpdateMostRecent url=${url}`)
-    const res = await dbClient.query(`
+    await dbClient.query(`
       INSERT INTO feeds (url, title, last_update_time, next_update_time,             most_recent_item) 
       VALUES            ($1,  $2,    now(),            now() + interval '5 minutes', $3              ) 
       ON CONFLICT (url) DO 
@@ -94,25 +87,24 @@ class FeedsTable extends Table {
           most_recent_item = EXCLUDED.most_recent_item;`, 
       [url, title, mostRecentItemDate]
     )
-    console.log(res)
   }
 
   async selectOutdated() {
     const res = await dbClient.query(
       `SELECT DISTINCT feeds.url FROM subscriptions JOIN feeds ON feed = feeds.url WHERE next_update_time < now();`
     )
-    console.log(res)
     return res
   }
 }
 
 class FeedItemsTable extends Table {
   async insertNewOrIgnore(id: string, title: string, itemURL: string, date: string, feedURL: string) {
-    const res = await dbClient.query(
-      'INSERT INTO feed_items (guid, title, url, date, feed) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING;',
+    await dbClient.query(`
+      INSERT INTO feed_items (guid, title, url, date, feed) 
+      VALUES                 ($1,   $2,    $3,  $4,   $5) 
+      ON CONFLICT DO NOTHING;`,
       [id, title, itemURL, date, feedURL]
     )
-    console.log(res)
   }
 
   async selectUpdates() {
@@ -124,7 +116,6 @@ class FeedItemsTable extends Table {
       WHERE i.date>s.last_sent and s.active 
       ORDER BY i.date ASC;`
     )
-    console.log(res)
     return res
   }
 

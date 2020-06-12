@@ -55,7 +55,7 @@ const handleSingleSubscription = async (ctx: ContextMessageUpdate, url: string) 
     await DB.subscriptions.insertNewOrUpdateLastSent(ctx.chat.id, url)
   } catch(err) {
     await DB.badFeeds.insert(ctx.chat.id, url, err)
-    ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, `'Could not load ${url}. Try sending a direct link to the feed`)
+    ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, `Could not load ${url}. Try sending a direct link to the feed`)
   }
 }
   

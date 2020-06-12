@@ -1,10 +1,9 @@
 import Telegraf from 'telegraf'
 import { job } from 'cron'
-import { handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe } from './handlers'
+import { handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe, handleHelp, handleResubscribe } from './handlers'
 import { fetchAll } from './crawler'
 import { updateAll } from './updater'
 import PostgreSQLSession from 'telegraf-session-postgresql'
-import { handleResubscribe } from './handlers/subscribe'
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
@@ -22,9 +21,9 @@ bot.use(Telegraf.log())
 bot.use(session)
 
 bot.start(handleStart)
+bot.command('help', handleHelp)
 bot.command('export', handleExport)
 bot.command('list', handleList)
-bot.command('subscribe', handleSubscribe)
 bot.action(/^resubscribe:(.+)/, handleResubscribe)
 
 bot.command('unsubscribe', handleUnsubscribe)
