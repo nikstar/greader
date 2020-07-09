@@ -57,7 +57,6 @@ func normalizeItem(feed string, item *gofeed.Item) {
 
 	// verify date was parsed
 	if item.PublishedParsed == nil {
-		log.Printf("error: failed to parse date: %v", item.Published)
 		t, err := ParseDate(item.Published)
 		if err != nil {
 			log.Printf("error: custom parse failed: %v", err)
@@ -70,7 +69,6 @@ func fetchFeed(f *Feed) (*gofeed.Feed, error) {
 	fp := gofeed.NewParser()
 	feed, err := fp.ParseURL(f.url)
 	if err != nil {
-		fmt.Printf("fetchFeed failed: %v\n", err)
 		return feed, err
 	}
 	for _, item := range feed.Items {
@@ -88,10 +86,8 @@ func fetchFeed(f *Feed) (*gofeed.Feed, error) {
 
 func worker(in <-chan *Feed, out chan<- string) {
 	for f := range in {
-		log.Println("worker started ", f.url)
 		fetchFeed(f)
 		out <- f.url
-		log.Println("worker finished", f.url)
 	}
 }
 
@@ -121,7 +117,7 @@ func crawler(done <-chan bool) {
 			log.Println("tick")
 			crawl(in)
 		case url := <-out:
-			log.Println("result recieved", url)
+			log.Println("crawled", url)
 		case <-done:
 			return
 		}
@@ -150,7 +146,7 @@ func handleCrawl(w http.ResponseWriter, r *http.Request) {
 	var feed = &Feed{url: url.String()}
 	_, err = fetchFeed(feed)
 	if err != nil {
-		log.Println("fetch failed:", err)
+		log.Printf("error: fetch failed: url=%v %v\n", feed.url, err)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("Fetch feed failed with error: " + err.Error()))
 		return

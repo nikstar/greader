@@ -6,7 +6,9 @@ import fetch from 'node-fetch'
 import { env } from 'process'
 
 async function findInPage(url: string): Promise<string> {
+  console.log(`findInPage start: ${url}`)
   if (!url.match('^https?://')) { url = 'https://' + url }
+  console.log(`findInPage fixed: ${url}`)
   const data = await (await fetch(url)).text()
   const html = cheerio.load(data)
   let candidate: string = undefined
@@ -14,26 +16,30 @@ async function findInPage(url: string): Promise<string> {
     if (candidate !== undefined) { return }
     if (e.attribs['rel'] == 'alternate' && (e.attribs['type'] == 'application/atom+xml' || e.attribs['type'] == 'application/rss+xml')) {
       let feedURL = e.attribs['href']
+      console.log(`raw candidate: ${feedURL}`)
       if (feedURL[0] == '/') { feedURL = new URL(feedURL, url).toString() }
+      console.log(`got candidate: ${feedURL}`)
       candidate = feedURL
     }
   })
   if (candidate) {
+    console.log(`findInPage returned: ${candidate}`)
     return candidate
   }
+  console.log(`findInPage failed: ${url}`)
   throw Error(`Could not find any candidates: ${url}`)
 }
 
 const handleSingleSubscription = async (ctx: ContextMessageUpdate, url: string) => {
   const msg = await ctx.reply('Loading ' + url)
 
-  const host = env['CRAWLER_HOST'] || 'localhost'
-  const resp = fetch(`http://${host}:9090/crawl?url=${url}`)
+  const crawlerHost = env['CRAWLER_HOST'] || 'localhost'
+  const resp = fetch(`http://${crawlerHost}:9090/crawl?url=${url}`)
     .then(async resp => {
       if (resp.status == 404) {
         console.log("404: " + resp.url)
         const candidate = await findInPage(url)
-        return fetch(`http://${host}:9090/crawl?url=${url}`)
+        return fetch(`http://${crawlerHost}:9090/crawl?url=${candidate}`)
       }
       return resp
     })
@@ -41,7 +47,7 @@ const handleSingleSubscription = async (ctx: ContextMessageUpdate, url: string) 
       let baseURL = new URL(url)
       baseURL.pathname = ""
       const candidate = await findInPage(baseURL.toString())
-      return fetch("http://localhost:9090/crawl?url=" + candidate)
+      return fetch(`http://${crawlerHost}:9090/crawl?url=${candidate}`)
     })
     .then(async resp => {
       if (resp.status != 200) {
