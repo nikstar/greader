@@ -47,8 +47,7 @@ func insertNewFeedOrUpdate(feed string, title string, date *time.Time) int64 {
 	var id int64
 	err := db.QueryRow(context.Background(), stmntInsertNewFeedOrUpdate, feed, title, date).Scan(&id)
 	if err != nil {
-		log.Println("error: insertNewFeedOrUpdate:", err)
-		log.Println(err)
+		log.Println("error: insertNewFeedOrUpdate:", feed, title, err)
 	}
 	return id
 }
@@ -57,7 +56,7 @@ func insertNewFeedItemOrDoNothing(feedID int64, item *gofeed.Item) bool {
 	var rowID int64
 	err := db.QueryRow(context.Background(), stmntInsertNewFeedItemOrDoNothing, feedID, item.GUID, item.Title, item.Link, item.PublishedParsed).Scan(&rowID)
 	if err != nil {
-		log.Println("error: insertNewFeedItemOrDoNothing:", err)
+		// log.Println("error: insertNewFeedItemOrDoNothing:", err)
 		return false
 	}
 	log.Println("added new item: id:", rowID)

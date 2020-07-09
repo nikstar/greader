@@ -3,6 +3,7 @@ import * as DB from '../db'
 import cheerio from 'cheerio'
 import Ctx from '../ctx'
 import fetch from 'node-fetch'
+import { env } from 'process'
 
 async function findInPage(url: string): Promise<string> {
   if (!url.match('^https?://')) { url = 'https://' + url }
@@ -26,12 +27,13 @@ async function findInPage(url: string): Promise<string> {
 const handleSingleSubscription = async (ctx: ContextMessageUpdate, url: string) => {
   const msg = await ctx.reply('Loading ' + url)
 
-  const resp = fetch("http://localhost:9090/crawl?url=" + url)
+  const host = env['CRAWLER_HOST'] || 'localhost'
+  const resp = fetch(`http://${host}:9090/crawl?url=${url}`)
     .then(async resp => {
       if (resp.status == 404) {
         console.log("404: " + resp.url)
         const candidate = await findInPage(url)
-        return fetch("http://localhost:9090/crawl?url=" + candidate)
+        return fetch(`http://${host}:9090/crawl?url=${url}`)
       }
       return resp
     })

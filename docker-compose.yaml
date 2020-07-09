@@ -1,0 +1,19 @@
+version: "3"
+
+services: 
+    bot:
+        image: greader-bot
+        build: ./bot 
+        env_file: ./.env.docker
+        extra_hosts: 
+            - host:139.162.187.171
+    
+    crawler:
+        image: greader-crawler
+        build: ./crawler 
+        env_file: ./.env.docker
+        extra_hosts: 
+            - host:139.162.187.171
+        hostname: crawler 
+        ports: 
+            - 9090:9090

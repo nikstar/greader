@@ -4,12 +4,12 @@
   "description": "Telegram bot for reading RSS feeds",
   "main": "index.ts",
   "scripts": {
-    "build": "tsc",
-    "start": "npm run-script build && node -r dotenv/config .build/index.js"
+    "tsc": "tsc",
+    "start": "npm run tsc && node -r dotenv/config .build/index.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nikstar/reader.git"
+    "url": "git+https://github.com/nikstar/greader.git"
   },
   "author": "nikstar",
   "license": "MIT",
