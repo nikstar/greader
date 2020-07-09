@@ -3,17 +3,17 @@ import Ctx from '../ctx'
 import { Extra, Markup } from 'telegraf'
 import { url } from 'inspector'
 
-const handleSingleUnsubscription = async (ctx: Ctx, url: string): Promise<boolean> => {
-  console.log(`Unsubscribing ${ctx.chat.id} from ${url}`)
+const handleSingleUnsubscription = async (ctx: Ctx, feed_id: string|number): Promise<boolean> => {
+  console.log(`Unsubscribing ${ctx.chat.id} from ${feed_id}`)
   try {
-    const id = await DB.subscriptions.updateInactive(ctx.chat.id, url)
+    const id = await DB.subscriptions.updateInactive(ctx.chat.id, feed_id)
     const extra = Markup
       .inlineKeyboard([
         Markup.callbackButton('Resubscribe', `resubscribe:${id}`, false)
       ], undefined)
       .resize()
       .extra()
-    await ctx.reply(`Unsubscribed from ${url}`, extra)
+    await ctx.reply(`Unsubscribed`, extra) // TODO: Show name and url
     return true
   } catch(err) {
     console.log(`handleSingleUnsubscription: ${err}`)
@@ -31,6 +31,7 @@ const handleUnsubscriptionReply = async (ctx: Ctx, url: string): Promise<boolean
     console.log(`reply error: ${err}`)
     return false
   }
+  return false
 }
   
 export const handleUnsubscribe = async (ctx: Ctx) => { 
@@ -67,8 +68,7 @@ export const handleUnsubscribe = async (ctx: Ctx) => {
 
 Pro tip: you can use /u instead of /unsubscribe`, Extra.HTML().markup(m => m.removeKeyboard()))
   }
-   
-  
+ 
 
   const found = urls.slice(0, 3)
     .map(entity => ctx.message.text.substr(entity.offset, entity.length))

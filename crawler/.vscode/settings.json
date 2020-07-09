@@ -1,0 +1,13 @@
+{
+    "go.autocompleteUnimportedPackages": true,
+    "go.useLanguageServer": true,
+    "go.formatTool": "goimports",
+    "gopls": {
+        // Add parameter placeholders when completing a function.
+       "usePlaceholders": false,
+   
+       // If true, enable additional analyses with staticcheck.
+       // Warning: This will significantly increase memory usage.
+       "staticcheck": false,
+   }
+}
