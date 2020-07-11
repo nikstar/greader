@@ -1,6 +1,6 @@
 .build
 node_modules
 .env*
-!.env.example
+!.env*.example
 *.log*
 crawler/crawler
