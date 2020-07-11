@@ -1,7 +1,7 @@
-import { ContextMessageUpdate } from 'telegraf'
-import * as DB from '../db'
+import Ctx from '../shared/ctx'
+import * as DB from '../shared/db'
 
-export const handleList = async (ctx: ContextMessageUpdate) => { 
+export const handleList = async (ctx: Ctx) => { 
   console.log('handler: list: ' + ctx.message.text) 
   const res = await DB.subscriptions.selectSubscriptionsForUser(ctx.chat.id)
   if (res.rowCount == 0) {

@@ -1,5 +1,5 @@
 
-import * as DB from './db'
+import * as DB from './shared/db'
 import Telegraf, { Telegram } from 'telegraf'
 
 export const updateAll = async (t: Telegram) => {

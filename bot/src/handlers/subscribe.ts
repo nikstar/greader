@@ -1,9 +1,8 @@
-import { ContextMessageUpdate } from 'telegraf'
-import * as DB from '../db'
 import cheerio from 'cheerio'
-import Ctx from '../ctx'
-import fetch from 'node-fetch'
+import Ctx from '../shared/ctx'
+import * as DB from '../shared/db'
 import { env } from 'process'
+import fetch from 'node-fetch'
 
 async function findInPage(url: string): Promise<string> {
   console.log(`findInPage start: ${url}`)
@@ -30,7 +29,7 @@ async function findInPage(url: string): Promise<string> {
   throw Error(`Could not find any candidates: ${url}`)
 }
 
-const handleSingleSubscription = async (ctx: ContextMessageUpdate, url: string) => {
+export const handleSingleSubscription = async (ctx: Ctx, url: string) => {
   const msg = await ctx.reply('Loading ' + url)
 
   const crawlerHost = env['CRAWLER_HOST'] || 'localhost'
@@ -87,16 +86,4 @@ export const handleSubscribe = async (ctx: Ctx) => {
   urls
     .map(entity => ctx.message.text.substr(entity.offset, entity.length))
     .forEach(async url => await handleSingleSubscription(ctx, url));
-}
-
-export const handleResubscribe = async (ctx: Ctx) => { 
-  try {
-    const id = ctx.match[1]
-    const url = await DB.subscriptions.selectURLForID(id)
-    ctx.answerCbQuery(`Resubscribing to ${url}`)
-    handleSingleSubscription(ctx, url)
-  } catch(err) {
-    console.log(`hanleResubscribe: ${err}`)
-    ctx.answerCbQuery(`Failed to resubscribe`)
-  }
 }

@@ -1,7 +1,6 @@
-import * as DB from '../db'
-import Ctx from '../ctx'
+import * as DB from '../shared/db'
+import Ctx from '../shared/ctx'
 import { Extra, Markup } from 'telegraf'
-import { url } from 'inspector'
 
 const handleSingleUnsubscription = async (ctx: Ctx, feed_id: string|number): Promise<boolean> => {
   console.log(`Unsubscribing ${ctx.chat.id} from ${feed_id}`)

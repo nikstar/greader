@@ -1,14 +1,14 @@
 import Telegraf from 'telegraf'
-import { job } from 'cron'
+import { job as cronJob } from 'cron'
 import { handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe, handleHelp, handleResubscribe } from './handlers'
 import { updateAll } from './updater'
-import PostgreSQLSession from 'telegraf-session-postgresql'
+import Session from 'telegraf-session-postgresql'
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
-const session = new PostgreSQLSession()
+const session = new Session()
 
-const updaterJob = job('30 * * * * *', () => updateAll(bot.telegram))
+const updaterJob = cronJob('30 * * * * *', () => updateAll(bot.telegram))
 updateAll(bot.telegram)
 updaterJob.start()
 

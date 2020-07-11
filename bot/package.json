@@ -14,19 +14,13 @@
   "author": "nikstar",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.19.2",
     "cheerio": "^1.0.0-rc.3",
     "cron": "^1.8.2",
     "node-fetch": "^2.6.0",
     "pg": "^8.0.0",
-    "rss-parser": "^3.8.0",
     "telegraf": "^3.37.0",
     "telegraf-i18n": "^6.6.0",
-    "telegraf-session-postgresql": "^1.0.3",
-    "telegraf-session-redis": "^5.1.0",
-    "xml2js": "^0.4.23",
-    "xmldom": "^0.3.0",
-    "xpath": "0.0.27"
+    "telegraf-session-postgresql": "^1.0.3"
   },
   "devDependencies": {
     "@types/cheerio": "^0.22.17",
@@ -34,10 +28,7 @@
     "@types/node": "^13.13.3",
     "@types/node-fetch": "^2.5.7",
     "@types/pg": "^7.14.3",
-    "@types/xml2js": "^0.4.5",
-    "@types/xmldom": "^0.1.29",
     "dotenv": "^8.2.0",
-    "node-html-parser": "^1.2.14",
     "typescript": "^3.8.3"
   }
 }

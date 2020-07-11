@@ -1,5 +1,5 @@
-import * as DB from '../db'
-import Ctx from '../ctx'
+import Ctx from '../shared/ctx'
+import * as DB from '../shared/db'
 
 export const handleStart = async (ctx: Ctx) => { 
   let str = `Welcome`
