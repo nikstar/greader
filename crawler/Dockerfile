@@ -2,8 +2,8 @@ FROM golang:1.14.4-alpine
 
 WORKDIR /usr/app
 
-ADD . /usr/app
-RUN go install
+COPY *.go go.mod go.sum /usr/app/
+RUN go build -o crawler
 
-CMD [ "crawler" ]
+CMD [ "/usr/app/crawler" ]
 EXPOSE 9090
