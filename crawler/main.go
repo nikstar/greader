@@ -125,6 +125,7 @@ func crawler(done <-chan bool) {
 }
 
 func handleCrawl(w http.ResponseWriter, r *http.Request) {
+	log.Printf("GET %v?%v", r.URL.Path, r.URL.RawQuery)
 	urls, ok := r.URL.Query()["url"]
 	if !ok || len(urls[0]) < 1 {
 		log.Println("Parameter 'url' is missing")
@@ -152,6 +153,7 @@ func handleCrawl(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Add("Content-Type", "plain/text")
+	log.Printf("OK %v->%v", feed.url, feed.id)
 	fmt.Fprintf(w, "%v\n", feed.id)
 }
 

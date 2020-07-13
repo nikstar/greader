@@ -11,20 +11,21 @@ import (
 
 const (
 	stmntInsertNewFeedItemOrDoNothing = `
-	INSERT INTO feed_items2 (feed_id, guid,  title, url, date) 
+	INSERT INTO feed_items (feed_id, guid,  title, url, date) 
 	VALUES                  ($1,      $2,    $3,    $4,  $5) 
 	ON CONFLICT DO NOTHING
 	RETURNING (id);
 	`
 	stmntSelectOudated = `
-	SELECT DISTINCT feeds2.id, feeds2.url 
+	SELECT DISTINCT feeds.id, feeds.url 
 	FROM subscriptions 
-		JOIN feeds2 ON subscriptions.feed = feeds2.url 
+	JOIN feeds ON 
+		subscriptions.feed_id = feeds.id 
 	WHERE next_update_time < now();
 	`
 	stmntInsertNewFeedOrUpdate = `
-	INSERT INTO feeds2 (url, title, last_update_time, next_update_time,             most_recent_item) 
-	VALUES             ($1,  $2,    now(),            now() + interval '4 minutes', $3              ) 
+	INSERT INTO feeds (url, title, last_update_time, next_update_time,             most_recent_item) 
+	VALUES            ($1,  $2,    now(),            now() + interval '4 minutes', $3              ) 
 	ON CONFLICT (url) DO 
 		UPDATE SET 
 			title = EXCLUDED.title, 
