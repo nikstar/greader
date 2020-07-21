@@ -15,7 +15,6 @@
   "license": "MIT",
   "dependencies": {
     "cheerio": "^1.0.0-rc.3",
-    "cron": "^1.8.2",
     "node-fetch": "^2.6.0",
     "pg": "^8.0.0",
     "telegraf": "^3.37.0",
@@ -24,7 +23,6 @@
   },
   "devDependencies": {
     "@types/cheerio": "^0.22.17",
-    "@types/cron": "^1.7.2",
     "@types/node": "^13.13.3",
     "@types/node-fetch": "^2.5.7",
     "@types/pg": "^7.14.3",

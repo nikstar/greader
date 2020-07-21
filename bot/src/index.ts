@@ -1,5 +1,4 @@
 import Telegraf from 'telegraf'
-import { job as cronJob } from 'cron'
 import { handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe, handleHelp, handleResubscribe } from './handlers'
 import { updateAll } from './updater'
 import UserSession from 'telegraf-session-postgresql'
@@ -22,8 +21,7 @@ bot.command('unsubscribe', handleUnsubscribe)
 bot.command('u', handleUnsubscribe)
 bot.on('text', handleSubscribe)
 
-const updaterJob = cronJob('30 * * * * *', () => updateAll(bot.telegram))
 updateAll(bot.telegram)
-updaterJob.start()
+setInterval(() => updateAll(bot.telegram), 30 * 1000)
 
 bot.launch()
