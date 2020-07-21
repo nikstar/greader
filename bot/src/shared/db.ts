@@ -128,10 +128,20 @@ class FeedItemsTable extends Table {
 
 class BadFeedsTable extends Table {
   async insert(chat_id: string|number, url: string, err: Error) {
-    this.db.query(`
+    await this.db.query(`
       INSERT INTO bad_feeds (user_id, url, comment) 
       VALUES                ($1,      $2,  $3);`,
       [chat_id, url, err.toString()]
+    )
+  }
+}
+
+class MessageLog extends Table {
+  async insert(chat_id: string|number, text: string, responseTime: number) {
+    await this.db.query(`
+      INSERT INTO message_log (chat_id, message, dt,    response_time)
+      VALUES                  ($1,      $2,      now(), $3           )`,
+      [chat_id, text, responseTime]
     )
   }
 }
@@ -143,3 +153,5 @@ export const feeds = new FeedsTable(dbClient)
 export const feedItems = new FeedItemsTable(dbClient)
 export const subscriptions = new SubscriptionsTable(dbClient)
 export const badFeeds = new BadFeedsTable(dbClient)
+export const messageLog = new MessageLog(dbClient)
+  

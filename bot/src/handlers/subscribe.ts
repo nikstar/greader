@@ -82,6 +82,7 @@ export const handleSubscribe = async (ctx: Ctx) => {
   const urls = ctx.message.entities?.filter(entity => entity.type == 'url')
   if (urls === undefined || urls.length == 0) {
     await ctx.reply(`Send me links you want to subscribe to`)
+    return
   }
   urls
     .map(entity => ctx.message.text.substr(entity.offset, entity.length))
