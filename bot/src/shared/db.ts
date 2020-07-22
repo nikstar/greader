@@ -8,19 +8,23 @@ class Table {
 }
 
 class UsersTable extends Table {
-  async insert(chat_id: string|number): Promise<boolean> {
+  async insert(chat_id: string|number, lang: string, username: string, first_name: string): Promise<boolean> {
     const r = await this.db.query(`
-      INSERT INTO users (chat_id) 
-      VALUES ($1) 
-      ON CONFLICT DO NOTHING;`, 
-      [chat_id]
+      INSERT INTO users (chat_id, lang, username, first_name) 
+      VALUES            ($1,      $2,   $3,       $4) 
+      ON CONFLICT (chat_id) DO 
+        UPDATE SET
+          lang       = EXCLUDED.lang,
+          username   = EXCLUDED.username,
+          first_name = EXCLUDED.first_name
+        ;`, 
+      [chat_id, lang, username, first_name]
     )
     return r.rowCount > 0
   }
 }
 
 class SubscriptionsTable extends Table {
-  // TODO: use ids in the table itself
   async insertNewOrUpdateLastSent(chat_id: string|number, feed_id: number) {
     await this.db.query(`
       INSERT INTO subscriptions (user_id, feed_id, last_sent, active) 

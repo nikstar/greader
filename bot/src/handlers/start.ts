@@ -8,5 +8,4 @@ export const handleStart = async (ctx: Ctx) => {
   }
   str += `!\n\nSend me links and I will follow them for you.`
   await ctx.reply(str)
-  await DB.users.insert(ctx.chat.id)
 }

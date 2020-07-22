@@ -2,13 +2,15 @@ import Telegraf from 'telegraf'
 import { handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe, handleHelp, handleResubscribe } from './handlers'
 import { updateAll } from './updater'
 import UserSession from 'telegraf-session-postgresql'
-import loggerMiddleware from './logger'
+import loggerMiddleware from './middleware/logger'
+import userInfoMiddleware from './middleware/user_info'
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
 const sessionMiddleware = new UserSession()
 
 bot.use(Telegraf.log())
+bot.use(userInfoMiddleware)
 bot.use(sessionMiddleware)
 bot.use(loggerMiddleware)
 
