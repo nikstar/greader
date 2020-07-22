@@ -12,16 +12,16 @@ import (
 const (
 	stmntInsertNewFeedItemOrDoNothing = `
 	INSERT INTO feed_items (feed_id, guid,  title, url, date) 
-	VALUES                  ($1,      $2,    $3,    $4,  $5) 
+	VALUES                 ($1,      $2,    $3,    $4,  $5) 
 	ON CONFLICT DO NOTHING
 	RETURNING (id);
 	`
 	stmntSelectOudated = `
 	SELECT DISTINCT feeds.id, feeds.url 
-	FROM subscriptions 
-	JOIN feeds ON 
+	FROM feeds 
+	JOIN subscriptions ON 
 		subscriptions.feed_id = feeds.id 
-	WHERE next_update_time < now();
+	WHERE next_update_time < now() AND subscriptions.active;
 	`
 	stmntInsertNewFeedOrUpdate = `
 	INSERT INTO feeds (url, title, last_update_time, next_update_time,             most_recent_item) 
