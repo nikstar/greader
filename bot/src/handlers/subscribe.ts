@@ -3,6 +3,7 @@ import Ctx from '../shared/ctx'
 import * as DB from '../shared/db'
 import { env } from 'process'
 import fetch from 'node-fetch'
+import sanitize from '../shared/sanitize'
 
 async function findInPage(url: string): Promise<string> {
   console.log(`findInPage start: ${url}`)
@@ -33,45 +34,55 @@ export const handleSingleSubscription = async (ctx: Ctx, url: string) => {
   const msg = await ctx.reply('Loading ' + url)
 
   const crawlerHost = env['CRAWLER_HOST'] || 'localhost'
-  const resp = fetch(`http://${crawlerHost}:9090/crawl?url=${url}`)
-    .then(async resp => {
+
+  
+  try {
+    let resp: any // final response to be handled
+
+    try {
+      // first try link as feed
+      resp = await fetch(`http://${crawlerHost}:9090/crawl?url=${url}`)
+      console.log(`1: ${resp.status}`)
       if (resp.status == 404) {
         console.log("404: " + resp.url)
         const candidate = await findInPage(url)
-        return fetch(`http://${crawlerHost}:9090/crawl?url=${candidate}`)
+        // then try link found in xml
+        resp = await fetch(`http://${crawlerHost}:9090/crawl?url=${candidate}`)
       }
-      return resp
-    })
-    .catch(async err => {
+    } catch (err) { //if unsuccessful try homepage
+      console.log(`2: ${err}`)
+      if (!url.match('^https?://')) { url = 'https://' + url }
       let baseURL = new URL(url)
       baseURL.pathname = ""
       const candidate = await findInPage(baseURL.toString())
-      return fetch(`http://${crawlerHost}:9090/crawl?url=${candidate}`)
-    })
-    .then(async resp => {
-      if (resp.status != 200) {
-        throw Error(`Subscription failed: url=${resp.url} status=${resp.status}`)
-      }
-      return resp
-    })  
-  
-  try {
-    const r = await resp
-    const feed_id = Number(await r.text())
+      resp = await fetch(`http://${crawlerHost}:9090/crawl?url=${candidate}`)
+    }
 
+    // handle resp
+    console.log(`3: ${resp.status}`)
+      if (resp.status != 200) {
+      throw Error(`Subscription failed: url=${resp.url} status=${resp.status}`)
+    }
+    console.log(`4: ${resp.url}`)
+    const r = resp
+    console.log(`5: ${r.status}`)
+    const feed_id = Number(await r.text())
+    console.log(`6: ${r.status}`)
     const title = await DB.feeds.selectFeedTitle(feed_id)
-    const items = await DB.feedItems.selectTenMostRecent(feed_id)
-    
+    console.log(`7: ${r.status}`)
+    const items = await DB.feedItems.selectTenMostRecent(feed_id)    
+    console.log(`8: ${r.status}`)
     // FIXME: change url to something that can be fetched from DB
-    let str = `<a href="${items[0].url}">⁠</a>Subscribed to <b><a href="${url}">${title}</a></b>\n\nRecent posts:\n`
+    let str = `<a href="${items[0].url}">⁠</a>Subscribed to <b><a href="${url}">${sanitize(title)}</a></b>\n\nRecent posts:\n`
     items.forEach(item => {
-      str += `→ <a href="${item.url}">${item.title}</a>\n`
+      str += `→ <a href="${item.url}">${sanitize(item.title)}</a>\n`
     })
     str += '\nLatest post:'
     await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, str, { parse_mode: 'HTML', disable_web_page_preview: false })
     await DB.subscriptions.insertNewOrUpdateLastSent(ctx.chat.id, feed_id)
-  
-  } catch(err) {
+
+  } catch (err) { // report fail
+    console.log(`6: ${err}`)
     await DB.badFeeds.insert(ctx.chat.id, url, err)
     ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, `Could not load ${url}. Try sending a direct link to the feed`)
   }
