@@ -2,7 +2,7 @@ import cheerio from 'cheerio'
 import Ctx from '../shared/ctx'
 import * as DB from '../shared/db'
 import { env } from 'process'
-import fetch from 'node-fetch'
+import fetch, { Response } from 'node-fetch'
 import sanitize from '../shared/sanitize'
 
 function fixUrl(url: string): string {
@@ -53,12 +53,31 @@ async function findInPage(pageUrl: string): Promise<string> {
   }
 }
 
-async function tryFeedUrl(feedUrl: string, crawlerHost: string): Promise<any> {
+async function tryCommonCandidates(pageUrl: string, homepageUrl: string, crawlerHost: string): Promise<Response> {
+  const medium = new RegExp('https?://medium.com/(@[a-z_]+)/.+')
+  if (pageUrl.match(medium)) {
+    const feedUrl = pageUrl.replace(medium, 'https://medium.com/feed/$1/')
+    console.log(`Found Medium feed candidate: ${feedUrl}`)
+    return tryFeedUrl(feedUrl, crawlerHost)
+  }
+
+  let commonPaths = [
+    "index.xml",
+    "feed.xml"
+  ]
+  for (const path of commonPaths) {
+    const candidate = homepageUrl + path 
+    const resp = await tryFeedUrl(candidate, crawlerHost)
+    if (resp.status == 200) {
+      return resp
+    }
+  }
+  return null;
+}
+
+async function tryFeedUrl(feedUrl: string, crawlerHost: string): Promise<Response> {
   try {
     const resp = await fetch(`http://${crawlerHost}:9090/crawl?url=${feedUrl}`)
-    if (resp.status != 404) {
-      return null
-    }
     return resp
   } catch (err) {
     console.log(`request to crawler returned error: ${err}`)
@@ -73,32 +92,42 @@ export const handleSingleSubscription = async (ctx: Ctx, url: string) => {
         
   try {
     let candidateUrl = fixUrl(url)
-    let resp: any = null // final response to be handled
+    let resp: Response = null // final response to be handled
 
     // first try link as feed
+    console.log(`0`)
     resp = await tryFeedUrl(candidateUrl, crawlerHost)
+    console.log(`1`)
         
     // next try find in page
-    if (resp == null) {
+    if (resp?.status != 200) {
       const newCandidate = await findInPage(candidateUrl)
       if (newCandidate != null) {
         candidateUrl = newCandidate
         resp = await tryFeedUrl(newCandidate, crawlerHost)
+        console.log(`2`)
       }
     }
 
     // next look in homepage
-    if (resp == null) {
+    if (resp?.status != 200) {
       const homepage = getHomepage(candidateUrl)
       const newCandidate = await findInPage(homepage)
       if (newCandidate != null) {
         candidateUrl = newCandidate
         resp = await tryFeedUrl(newCandidate, crawlerHost)
+        console.log(`3`)
+    
       }
     }
 
+    if (resp?.status != 200) {
+      resp = await tryCommonCandidates(fixUrl(url), getHomepage(url), crawlerHost)
+      console.log(`4`) 
+    }
+
     // out of options. what do we have?
-    if (resp == null || resp.status != 200) {
+    if (resp?.status != 200) {
       throw Error(`Subscription failed: url=${resp.url} status=${resp.status}`)
     }
     const feed_id = Number(await resp.text())
