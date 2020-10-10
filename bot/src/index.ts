@@ -1,18 +1,27 @@
 import Telegraf from 'telegraf'
+import TelegrafI18n from 'telegraf-i18n'
 import { handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe, handleHelp, handleResubscribe } from './handlers'
 import { updateAll } from './updater'
 import UserSession from 'telegraf-session-postgresql'
 import loggerMiddleware from './middleware/logger'
 import userInfoMiddleware from './middleware/user_info'
+import { pathToFileURL } from 'url'
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
-
 const sessionMiddleware = new UserSession()
+const i18nMiddleware = TelegrafI18n({
+  defaultLacale: 'en',
+  useSession: true,
+  defautlLanguageOnMissing: true,
+  directory: path.resolve(__dirname.resolve('locale'))
+})
+
 
 bot.use(Telegraf.log())
 bot.use(userInfoMiddleware)
 bot.use(sessionMiddleware)
 bot.use(loggerMiddleware)
+bot.use(i18nMiddleware)
 
 bot.start(handleStart)
 bot.command('help', handleHelp)
