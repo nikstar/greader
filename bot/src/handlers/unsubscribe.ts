@@ -53,8 +53,8 @@ export const handleUnsubscribe = async (ctx: Ctx) => {
       .filter(async token => await token)
     if (found.length == 0) {
       await ctx.reply(`Could not unsubscribe. To unsubscribe you can
-- <i>reply</i> /unsubscribe to an item in the feed you want to unsubscribe from, or 
-- send me a feed url <i>directly</i>: <code>/unsubscribe https://example.com/rss</code>`)
+- <b>reply</b> /unsubscribe to an item in the feed you want to unsubscribe from, or 
+- send me a feed url directly: <code>/unsubscribe https://example.com/rss</code>`, { parse_mode: 'HTML' })
     }
     return 
   } 
@@ -62,10 +62,11 @@ export const handleUnsubscribe = async (ctx: Ctx) => {
   const urls = ctx.message?.entities?.filter(entity => entity.type == 'url')
   if (urls.length == 0) {
     await ctx.reply(`To unsubscribe you can
-- <i>reply</i> /unsubscribe to an item in the feed you want to unsubscribe from, or 
-- send me a feed url <i>directly</i>: <code>/unsubscribe https://example.com/rss</code>
+- <b>reply</b> /unsubscribe to an item in the feed you want to unsubscribe from, or 
+- send me a feed url directly: <code>/unsubscribe https://example.com/rss</code>
 
-Pro tip: you can use /u instead of /unsubscribe`, Extra.HTML().markup(m => m.removeKeyboard()))
+Pro tip: use /u instead of /unsubscribe`, Extra.HTML().markup(m => m.removeKeyboard()))
+    return
   }
  
 
@@ -76,7 +77,7 @@ Pro tip: you can use /u instead of /unsubscribe`, Extra.HTML().markup(m => m.rem
 
   if (found.length == 0) {
     await ctx.reply(`Could not unsubscribe. To unsubscribe you can
-- <i>reply</i> /unsubscribe to an item in the feed you want to unsubscribe from, or 
-- send me a feed url <i>directly</i>: <code>/unsubscribe https://example.com/rss</code>`)
+- <b>reply</b> /unsubscribe to an item in the feed you want to unsubscribe from, or 
+- send me a feed url directly: <code>/unsubscribe https://example.com/rss</code>`, { parse_mode: 'HTML' })
   }
 }
