@@ -7,6 +7,16 @@ class Table {
   }
 }
 
+export class Feed {
+  url: string 
+  title: string
+
+  constructor(url: string, title: string) {
+    this.url = url
+    this.title = title
+  }
+}
+
 class UsersTable extends Table {
   async insert(chat_id: string|number, lang: string, username: string, first_name: string): Promise<boolean> {
     const r = await this.db.query(`
@@ -37,7 +47,7 @@ class SubscriptionsTable extends Table {
     )
   }
 
-  async selectSubscriptionsForUser(id: string|number) {
+  async selectSubscriptionsForUser(id: string|number): Promise<Feed[]> {
     const res = await this.db.query(`
       SELECT url, title 
       FROM subscriptions AS s 
@@ -47,7 +57,7 @@ class SubscriptionsTable extends Table {
       ORDER BY most_recent_item DESC;`, 
       [id]
     )
-    return res
+    return res.rows.flatMap(row => row as Feed)
   }
 
   async selectURLForID(id: string|number) {
