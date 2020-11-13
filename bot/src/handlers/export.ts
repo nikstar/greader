@@ -15,13 +15,13 @@ const tail =
 </opml>
 `
 
-function generateOMPL(feeds: DB.Feed[]): string {
-  let ompl = head
+function generateOPML(feeds: DB.Feed[]): string {
+  let opml = head
   feeds.forEach(feed => {
-    ompl += `    <outline type="rss" text="" title="${feed.title}" xmlUrl="${feed.url}"/>\n` // htmlUrl="..."
+    opml += `    <outline type="rss" text="" title="${feed.title}" xmlUrl="${feed.url}"/>\n` // htmlUrl="..."
   })
-  ompl += tail 
-  return ompl
+  opml += tail 
+  return opml
 }
 
 function date(): string {
@@ -38,9 +38,9 @@ export const handleExport = async (ctx: Ctx) => {
     await ctx.reply(`You don't have any subscriptions. Send me links to subscribe.`)
     return
   }
-  let ompl = generateOMPL(feeds)
+  let opml = generateOPML(feeds)
   await ctx.replyWithDocument({
-    filename: `greader-export-${date()}.ompl`,
-    source: Buffer.from(ompl)
+    filename: `greader-export-${date()}.opml`,
+    source: Buffer.from(opml)
   })
 }
