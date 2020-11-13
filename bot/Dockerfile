@@ -1,11 +1,11 @@
 FROM node:13.12.0-alpine
 
-WORKDIR /usr/app
+WORKDIR /app
 
 COPY package.json package-lock.json ./
 RUN npm i
 
-COPY src/ tsconfig.json /usr/app/
+COPY src/ tsconfig.json ./
 RUN npm run tsc
 
-CMD [ "node", "--unhandled-rejections=strict", ".build/index.js" ]
+CMD [ "node", "--unhandled-rejections=strict", "--inspect=0.0.0.0", ".build/index.js" ]
