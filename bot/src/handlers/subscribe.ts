@@ -87,7 +87,6 @@ async function tryFeedUrl(feedUrl: string, crawlerHost: string): Promise<Respons
 
 export const handleSingleSubscription = async (ctx: Ctx, url: string) => {
   
-  const msg = await ctx.reply(`Loading ${url}`)
   const crawlerHost = env['CRAWLER_HOST'] || 'localhost'
         
   try {
@@ -139,13 +138,13 @@ export const handleSingleSubscription = async (ctx: Ctx, url: string) => {
       str += `→ <a href="${item.url}">${sanitize(item.title)}</a>\n`
     })
     str += `\nLatest post:`
-    await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, str, { parse_mode: 'HTML', disable_web_page_preview: false })
+    await ctx.reply(str, { parse_mode: 'HTML', disable_web_page_preview: false })
     await DB.subscriptions.insertNewOrUpdateLastSent(ctx.chat.id, feed_id)
   
   } catch (err) { // report fail to the user
     
     await DB.badFeeds.insert(ctx.chat.id, url, err)
-    ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, `Could not load ${url}. Try sending a direct link to the feed`)
+    await ctx.reply(`Could not load ${url}. Try sending a direct link to the feed`, { disable_web_page_preview: true })
   }
 }
   
