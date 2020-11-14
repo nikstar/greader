@@ -35,6 +35,12 @@ class UsersTable extends Table {
 }
 
 class SubscriptionsTable extends Table {
+
+
+  // todo: this may cause a message to be sent immediately if the last item has a date in the future
+  // e.g. https://dortania.github.io/hackintosh/updates/2020/12/10/bigsur-new.html
+  // last_sent should be date of last item instead of now()
+
   async insertNewOrUpdateLastSent(chat_id: string|number, feed_id: number) {
     await this.db.query(`
       INSERT INTO subscriptions (user_id, feed_id, last_sent, active) 
@@ -46,6 +52,23 @@ class SubscriptionsTable extends Table {
       [chat_id, feed_id]
     )
   }
+
+  async insertNewOrActivate(chat_id: string|number, feed_id: number) {
+    await this.db.query(`
+      INSERT INTO subscriptions (user_id, feed_id, last_sent, active) 
+      VALUES                    ($1,      $2,      now(),     true  ) 
+      ON CONFLICT (user_id, feed_id) DO NOTHING`,
+      [chat_id, feed_id]
+    )
+    await this.db.query(`
+      UPDATE subscriptions
+      SET last_sent = now(), active = true
+      WHERE user_id = $1 AND feed_id = $2 AND active = false
+      `,
+      [chat_id, feed_id]
+    )
+  }
+
 
   async selectSubscriptionsForUser(id: string|number): Promise<Feed[]> {
     const res = await this.db.query(`
