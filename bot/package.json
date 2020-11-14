@@ -15,6 +15,7 @@
   "license": "MIT",
   "dependencies": {
     "cheerio": "^1.0.0-rc.3",
+    "fast-xml-parser": "^3.17.4",
     "node-fetch": "^2.6.1",
     "pg": "^8.0.0",
     "telegraf": "^3.37.0",

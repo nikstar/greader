@@ -1,5 +1,5 @@
 import Telegraf from 'telegraf'
-import { handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe, handleHelp, handleResubscribe } from './handlers'
+import { handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe, handleHelp, handleResubscribe, handleImportFile } from './handlers'
 import { updateAll } from './updater'
 import UserSession from 'telegraf-session-postgresql'
 import loggerMiddleware from './middleware/logger'
@@ -23,6 +23,7 @@ bot.command('s', handleSubscribe)
 bot.action(/^resubscribe:(.+)/, handleResubscribe)
 bot.command('unsubscribe', handleUnsubscribe)
 bot.command('u', handleUnsubscribe)
+bot.on('document', handleImportFile)
 bot.on('text', handleSubscribe)
 
 updateAll(bot.telegram)

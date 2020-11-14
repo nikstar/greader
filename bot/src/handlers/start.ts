@@ -1,5 +1,4 @@
 import Ctx from '../shared/ctx'
-import * as DB from '../shared/db'
 
 export const handleStart = async (ctx: Ctx) => { 
   let str = `Welcome`
@@ -7,5 +6,8 @@ export const handleStart = async (ctx: Ctx) => {
     str += `, ${ctx.from.first_name}`
   }
   str += `!\n\nSend me links and I will follow them for you.`
+  if (ctx.chat?.type == 'private') {
+    str += ` No need to use any commands.`
+  }
   await ctx.reply(str)
 }
