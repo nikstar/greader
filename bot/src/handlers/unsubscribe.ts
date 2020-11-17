@@ -20,42 +20,34 @@ const handleSingleUnsubscription = async (ctx: Ctx, feed_id: string|number): Pro
   }
 }
 
-const handleUnsubscriptionReply = async (ctx: Ctx, url: string): Promise<boolean> => {
-  console.log(`trying to find subscription for ${url}`)
-  // todo: this does not neccessarily uniquely identify the subscribtion - what is better? keep track of ids for messages?
+const handleUnsubscriptionReply = async (ctx: Ctx): Promise<boolean> => {
   try {
-    const feedUrl = await DB.feedItems.selectFeedForItemUrl(url)
-    return await handleSingleUnsubscription(ctx, feedUrl)
+    const reply = ctx.message.reply_to_message
+    const subscription_id = await DB.unsubscriptions.lookup(reply.chat.id, reply.message_id)
+    await DB.subscriptions.updateInactiveDirect(subscription_id)
+    const info = await DB.subscriptions.info(subscription_id)
+    const extra = Extra
+      .HTML(true)
+      .markup(
+        Markup
+          .inlineKeyboard([
+            Markup.callbackButton('Resubscribe', `enable_subscription:${subscription_id}`, false)
+          ], undefined)
+          .resize()
+      )
+    await ctx.reply(`Unsubscribed from <b><a href="${info.url}">${info.title}</a></b>`, extra)
+    return true
   } catch(err) {
     console.log(`reply error: ${err}`)
     return false
   }
-  return false
 }
   
 export const handleUnsubscribe = async (ctx: Ctx) => { 
   console.log('handler: unsubscribe: ' + ctx.message.text) 
   
   if (ctx.message.reply_to_message) {
-    const message = ctx.message.reply_to_message
-    const entities = message.entities
-
-    console.log(`reply entities:`)
-    entities.forEach(e =>  console.log(e.type, e.offset, e.length))
-    const text_urls = entities.filter(entity => entity.type == 'text_link') // unclear why <a> tags do not give me these
-      .map(entity => entity.url)
-    let urls = entities?.filter(entity => entity.type == 'url')
-      .map(entity => message.text.substr(entity.offset, entity.length))
-    urls = urls.concat(text_urls)
-    console.log(`found reply urls: ${urls}`)
-    const found = urls
-      .map(url => handleUnsubscriptionReply(ctx, url))
-      .filter(async token => await token)
-    if (found.length == 0) {
-      await ctx.reply(`Could not unsubscribe. To unsubscribe you can
-- <b>reply</b> /unsubscribe to an item in the feed you want to unsubscribe from, or 
-- send me a feed url directly: <code>/unsubscribe https://example.com/rss</code>`, { parse_mode: 'HTML' })
-    }
+    const ok = await handleUnsubscriptionReply(ctx)
     return 
   } 
   
