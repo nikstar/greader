@@ -123,15 +123,16 @@ class SubscriptionsTable extends Table {
     )
   }
 
-  async updateInactive(chat_id: string|number, feed_id: string|number): Promise<number> {
+  async updateInactiveByUrl(chat_id: string|number, url: string): Promise<number> {
     const r = await this.db.query(`
       UPDATE subscriptions 
       SET active = false 
-      WHERE user_id = $1 AND feed_id = $2
-      RETURNING id
-      `, [chat_id, feed_id])
+      FROM feeds
+      WHERE user_id = $1 AND feed_id = feeds.id AND feeds.url = $2 
+      RETURNING subscriptions.id`, 
+      [chat_id, url])
     if (r.rowCount == 0) {
-      throw Error(`db: no active subscription for chat_id=${chat_id}, feed_id=${feed_id}`)
+      throw Error(`db: no active subscription for chat_id=${chat_id} url=${url}`)
     }
     return r.rows[0].id  
   }
