@@ -1,0 +1,16 @@
+Name: 
+G Reader
+
+
+Description: 
+This RSS reader bot will follow websites and send you updates. Just send links you want to subscribe to, no commands necessary.
+
+
+About: 
+RSS feed reader bot that follows websites and sends you updates
+
+
+Commands:
+list - List subsciptions
+unsubscribe - Reply to bot's message to unsubscribe
+help - Show help
