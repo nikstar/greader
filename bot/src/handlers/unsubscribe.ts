@@ -41,11 +41,7 @@ const handleUnsubscriptionReply = async (ctx: Ctx): Promise<boolean> => {
   }
 }
   
-const help = `To unsubscribe you can
-- <b>reply</b> /unsubscribe to an item in the feed you want to unsubscribe from, or 
-- send me a feed url directly: <code>/unsubscribe https://example.com/rss</code>
-
-Pro tip: use /u instead of /unsubscribe`
+const help = `To unsubscribe you can <b>reply</b> /unsubscribe (/u) to an item in the feed you want to unsubscribe from, or send a feed url directly: /u https://example.com/feed.xml`
 
 export const handleUnsubscribe = async (ctx: Ctx) => { 
   console.log('handler: unsubscribe: ' + ctx.message.text) 
@@ -68,8 +64,6 @@ export const handleUnsubscribe = async (ctx: Ctx) => {
     .filter(async token => await token)
 
   if (found.length == 0) {
-    await ctx.reply(`Could not unsubscribe. To unsubscribe you can
-- <b>reply</b> /unsubscribe to an item in the feed you want to unsubscribe from, or 
-- send me a feed url directly: <code>/unsubscribe https://example.com/rss</code>`, { parse_mode: 'HTML' })
+    await ctx.reply(`Could not unsubscribe. ` + help, { parse_mode: 'HTML' })
   }
 }
