@@ -41,16 +41,21 @@ class SubscriptionsTable extends Table {
   // e.g. https://dortania.github.io/hackintosh/updates/2020/12/10/bigsur-new.html
   // last_sent should be date of last item instead of now()
 
-  async insertNewOrUpdateLastSent(chat_id: string|number, feed_id: number) {
-    await this.db.query(`
+  async insertNewOrUpdateLastSent(chat_id: string|number, feed_id: number): Promise<number> {
+    const res = await this.db.query(`
       INSERT INTO subscriptions (user_id, feed_id, last_sent, active) 
       VALUES                    ($1,      $2,       now(),     true  ) 
       ON CONFLICT (user_id, feed_id) DO 
         UPDATE SET 
           last_sent = EXCLUDED.last_sent, 
-          active = true`,
+          active = true
+      RETURNING id
+          `,
       [chat_id, feed_id]
     )
+    if (res.rowCount) {
+      return res.rows[0].id
+    }
   }
 
   async insertNewOrActivate(chat_id: string|number, feed_id: number) {
@@ -69,7 +74,6 @@ class SubscriptionsTable extends Table {
     )
   }
 
-
   async selectSubscriptionsForUser(id: string|number): Promise<Feed[]> {
     const res = await this.db.query(`
       SELECT url, title 
@@ -81,6 +85,21 @@ class SubscriptionsTable extends Table {
       [id]
     )
     return res.rows.flatMap(row => row as Feed)
+  }
+
+  async info(subscription_id: number): Promise<Feed> {
+    const res = await this.db.query(`
+      SELECT url, title 
+      FROM subscriptions AS s 
+      JOIN feeds AS f ON 
+        s.feed_id = f.id 
+      WHERE s.id = $1;`, 
+      [subscription_id]
+    )
+    if (res.rowCount) {
+      return res.rows[0] as Feed
+    }
+    return undefined
   }
 
   async selectURLForID(id: string|number) {
@@ -104,19 +123,28 @@ class SubscriptionsTable extends Table {
     )
   }
 
-  async updateInactive(chat_id: string|number, feed_id: string|number): Promise<number> {
+  async updateInactiveByUrl(chat_id: string|number, url: string): Promise<number> {
     const r = await this.db.query(`
       UPDATE subscriptions 
       SET active = false 
-      WHERE user_id = $1 AND feed_id = $2
-      RETURNING id
-      `, [chat_id, feed_id])
+      FROM feeds
+      WHERE user_id = $1 AND feed_id = feeds.id AND feeds.url = $2 
+      RETURNING subscriptions.id`, 
+      [chat_id, url])
     if (r.rowCount == 0) {
-      throw Error(`db: no active subscription for chat_id=${chat_id}, feed_id=${feed_id}`)
+      throw Error(`db: no active subscription for chat_id=${chat_id} url=${url}`)
     }
     return r.rows[0].id  
   }
   
+  async updateInactiveDirect(subscription_id: number) {
+    await this.db.query(`
+      UPDATE subscriptions 
+      SET active = false 
+      WHERE id = $1
+      `, 
+      [subscription_id])
+  }
 }
 
 class FeedsTable extends Table {
@@ -133,7 +161,7 @@ class FeedsTable extends Table {
 class FeedItemsTable extends Table {
   async selectUpdates() {
     const res = await this.db.query(`
-      SELECT s.user_id AS chat_id,i.url AS item_url,i.title AS item_title,i.date as item_date,f.id AS feed_id,f.title AS feed_title 
+      SELECT s.user_id AS chat_id,i.url AS item_url,i.title AS item_title,i.date as item_date,f.id AS feed_id,f.title AS feed_title, s.id AS subscription_id 
       FROM subscriptions AS s 
         JOIN feeds      AS f ON s.feed_id = f.id 
         JOIN feed_items AS i ON f.id = i.feed_id
@@ -183,6 +211,31 @@ class MessageLog extends Table {
   }
 }
 
+class Unsubscriptions extends Table {
+  async insert(chat_id: string|number, msg_id: number, subscription_id: number) {
+    console.log(`insert: chat_id=${chat_id} msg_id=${msg_id} sub_id=${subscription_id}`)
+    await this.db.query(`
+      INSERT INTO unsubscriptions (chat_id, msg_id, subscription_id)
+      VALUES                      ($1,      $2,     $3             )`,
+      [chat_id, msg_id, subscription_id]
+    )
+  }
+
+  async lookup(chat_id: string|number, msg_id: number): Promise<number> {
+    console.log(`lookup: chat_id=${chat_id} msg_id=${msg_id}`)
+    let res = await this.db.query(`
+      SELECT subscription_id 
+      FROM unsubscriptions
+      WHERE chat_id = $1 AND msg_id = $2`,
+      [chat_id, msg_id]
+    )
+    if (res.rowCount) {
+      return res.rows[0].subscription_id 
+    }
+    return undefined
+  }
+}
+
 const dbClient = new Client()
 dbClient.connect()
 export const users = new UsersTable(dbClient)
@@ -191,4 +244,4 @@ export const feedItems = new FeedItemsTable(dbClient)
 export const subscriptions = new SubscriptionsTable(dbClient)
 export const badFeeds = new BadFeedsTable(dbClient)
 export const messageLog = new MessageLog(dbClient)
-  
+export const unsubscriptions = new Unsubscriptions(dbClient)

@@ -138,8 +138,9 @@ export const handleSingleSubscription = async (ctx: Ctx, url: string) => {
       str += `→ <a href="${item.url}">${sanitize(item.title)}</a>\n`
     })
     str += `\nLatest post:`
-    await ctx.reply(str, { parse_mode: 'HTML', disable_web_page_preview: false })
-    await DB.subscriptions.insertNewOrUpdateLastSent(ctx.chat.id, feed_id)
+    const msg = await ctx.reply(str, { parse_mode: 'HTML', disable_web_page_preview: false })
+    const subscription_id = await DB.subscriptions.insertNewOrUpdateLastSent(ctx.chat.id, feed_id)
+    await DB.unsubscriptions.insert(msg.chat.id, msg.message_id, subscription_id)
   
   } catch (err) { // report fail to the user
     
