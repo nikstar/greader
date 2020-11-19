@@ -43,9 +43,9 @@ class SubscriptionsTable extends Table {
 
   async insertNewOrUpdateLastSent(chat_id: string|number, feed_id: number): Promise<number> {
     const res = await this.db.query(`
-      INSERT INTO subscriptions (user_id, feed_id, last_sent, active) 
+      INSERT INTO subscriptions (chat_id, feed_id, last_sent, active) 
       VALUES                    ($1,      $2,       now(),     true  ) 
-      ON CONFLICT (user_id, feed_id) DO 
+      ON CONFLICT (chat_id, feed_id) DO 
         UPDATE SET 
           last_sent = EXCLUDED.last_sent, 
           active = true
@@ -60,15 +60,15 @@ class SubscriptionsTable extends Table {
 
   async insertNewOrActivate(chat_id: string|number, feed_id: number) {
     await this.db.query(`
-      INSERT INTO subscriptions (user_id, feed_id, last_sent, active) 
+      INSERT INTO subscriptions (chat_id, feed_id, last_sent, active) 
       VALUES                    ($1,      $2,      now(),     true  ) 
-      ON CONFLICT (user_id, feed_id) DO NOTHING`,
+      ON CONFLICT (chat_id, feed_id) DO NOTHING`,
       [chat_id, feed_id]
     )
     await this.db.query(`
       UPDATE subscriptions
       SET last_sent = now(), active = true
-      WHERE user_id = $1 AND feed_id = $2 AND active = false
+      WHERE chat_id = $1 AND feed_id = $2 AND active = false
       `,
       [chat_id, feed_id]
     )
@@ -80,7 +80,7 @@ class SubscriptionsTable extends Table {
       FROM subscriptions AS s 
       JOIN feeds AS f ON 
         s.feed_id = f.id 
-      WHERE s.user_id = $1 AND active 
+      WHERE s.chat_id = $1 AND active 
       ORDER BY most_recent_item DESC;`, 
       [id]
     )
@@ -118,7 +118,7 @@ class SubscriptionsTable extends Table {
     await this.db.query(`
       UPDATE subscriptions 
       SET last_sent = $1 
-      WHERE user_id = $2 AND feed_id = $3;`,
+      WHERE chat_id = $2 AND feed_id = $3;`,
       [date, chat_id, feed_id]
     )
   }
@@ -128,7 +128,7 @@ class SubscriptionsTable extends Table {
       UPDATE subscriptions 
       SET active = false 
       FROM feeds
-      WHERE user_id = $1 AND feed_id = feeds.id AND feeds.url = $2 
+      WHERE chat_id = $1 AND feed_id = feeds.id AND feeds.url = $2 
       RETURNING subscriptions.id`, 
       [chat_id, url])
     if (r.rowCount == 0) {
@@ -161,7 +161,7 @@ class FeedsTable extends Table {
 class FeedItemsTable extends Table {
   async selectUpdates() {
     const res = await this.db.query(`
-      SELECT s.user_id AS chat_id,i.url AS item_url,i.title AS item_title,i.date as item_date,f.id AS feed_id,f.title AS feed_title, s.id AS subscription_id 
+      SELECT s.chat_id AS chat_id,i.url AS item_url,i.title AS item_title,i.date as item_date,f.id AS feed_id,f.title AS feed_title, s.id AS subscription_id 
       FROM subscriptions AS s 
         JOIN feeds      AS f ON s.feed_id = f.id 
         JOIN feed_items AS i ON f.id = i.feed_id
@@ -194,7 +194,7 @@ class FeedItemsTable extends Table {
 class BadFeedsTable extends Table {
   async insert(chat_id: string|number, url: string, err: Error) {
     await this.db.query(`
-      INSERT INTO bad_feeds (user_id, url, comment) 
+      INSERT INTO bad_feeds (chat_id, url, comment) 
       VALUES                ($1,      $2,  $3);`,
       [chat_id, url, err.toString()]
     )
