@@ -26,7 +26,10 @@
     "@types/node": "^13.13.3",
     "@types/node-fetch": "^2.5.7",
     "@types/pg": "^7.14.3",
+    "@typescript-eslint/eslint-plugin": "^4.28.3",
+    "@typescript-eslint/parser": "^4.28.3",
     "dotenv": "^8.2.0",
-    "typescript": "^3.8.3"
+    "eslint": "^7.31.0",
+    "typescript": "^3.9.10"
   }
 }
