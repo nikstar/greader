@@ -12,6 +12,7 @@ services:
             - host:172.17.0.1
         ports:
             - 9229:9229
+        restart: always
     
     crawler:
         image: greader-crawler
@@ -22,6 +23,7 @@ services:
         hostname: crawler 
         ports: 
             - 9090:9090
+        restart: always
 
 # expose crawler port to bot instead of to everyone
 # expose: [ "9090" ]
