@@ -8,90 +8,78 @@ import (
 	urllib "net/url"
 	"os"
 	"os/signal"
-	"sort"
 	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/mmcdole/gofeed"
 )
 
 const (
+	// numWorkers is the number of concurrent workers
 	numWorkers = 32
 )
 
-func recentItems(feed *gofeed.Feed) []*gofeed.Item {
-	sort.Sort(feed)
-	i := len(feed.Items) - 10
-	if i < 0 {
-		i = 0
-	}
-	return feed.Items[i:]
-}
+// sets up crawler and server
+func main() {
 
-func normalizeItem(feed string, item *gofeed.Item) {
+	done := make(chan bool)
 
-	// verify urls
-	feedURL, err := urllib.Parse(feed)
+	// init database
+	var err error
+	db, err = pgxpool.Connect(context.Background(), "")
 	if err != nil {
-		log.Printf("not a vaild feed url: %v", err)
-		return
+		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		os.Exit(1)
 	}
-	url, err := urllib.Parse(item.Link)
-	if err != nil {
-		log.Printf("not a vaild url: %v", err)
-		return
-	}
-	if url.Host == "" {
-		url.Scheme = feedURL.Scheme
-		url.User = feedURL.User
-		url.Host = feedURL.Host
-	}
-	item.Link = url.String()
+	defer db.Close()
 
-	// verify dates
-	if item.PublishedParsed == nil && item.Published == "" {
-		item.Published = item.Updated
-		item.PublishedParsed = item.UpdatedParsed
-	}
-
-	// verify date was parsed
-	if item.PublishedParsed == nil {
-		t, err := ParseDate(item.Published)
-		if err != nil {
-			log.Printf("error: custom parse failed: %v", err)
+	// handle interrupt
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		for sig := range c {
+			if sig == os.Interrupt || sig == syscall.SIGTERM {
+				log.Printf("Recieved signal: %v. Exiting...", sig)
+				done <- true
+				db.Close()
+				os.Exit(0)
+			}
 		}
-		item.PublishedParsed = &t
+	}()
+
+	// crawl
+	go crawler(done)
+
+	// server
+	http.HandleFunc("/crawl", handleCrawl)
+	http.ListenAndServe(":9090", nil)
+}
+
+// crawler crawls outdated feeds at regular intervals
+//
+// It sets up numWorkers workers to crawl feeds concurrently. Then periodically calls findOutdatedFeeds to find outdated feeds and send them to workers.
+func crawler(done <-chan bool) {
+	ticker := time.NewTicker(30 * time.Second)
+	outdatedFeeds := make(chan *Feed)
+	out := make(chan string)
+	for w := 0; w < numWorkers; w++ {
+		go worker(outdatedFeeds, out)
+	}
+	for {
+		select {
+		case <-ticker.C:
+			log.Println("tick")
+			findOutdatedFeeds(outdatedFeeds)
+		case url := <-out:
+			log.Println("crawled", url)
+		case <-done:
+			return
+		}
 	}
 }
 
-func fetchFeed(f *Feed) (*gofeed.Feed, error) {
-	fp := gofeed.NewParser()
-	feed, err := fp.ParseURL(f.url)
-	if err != nil {
-		return feed, err
-	}
-	for _, item := range feed.Items {
-		normalizeItem(f.url, item)
-	}
-	items := recentItems(feed)
-	f.id = insertNewFeedOrUpdate(f.url, feed.Title, items[len(items)-1].PublishedParsed)
-	log.Printf("feed: id=%v url=%v", f.id, f.url)
-
-	for _, item := range items {
-		_ = insertNewFeedItemOrDoNothing(f.id, item)
-	}
-	return feed, nil
-}
-
-func worker(in <-chan *Feed, out chan<- string) {
-	for f := range in {
-		fetchFeed(f)
-		out <- f.url
-	}
-}
-
-func crawl(in chan<- *Feed) {
+// findOutdatedFeeds crawls all outdated feeds and reports updated feeds to provided channel
+func findOutdatedFeeds(in chan<- *Feed) {
 	feeds, err := selectOutdated()
 	if err != nil {
 		log.Println("failed to select outdated:", err)
@@ -104,26 +92,20 @@ func crawl(in chan<- *Feed) {
 	}()
 }
 
-func crawler(done <-chan bool) {
-	ticker := time.NewTicker(30 * time.Second)
-	in := make(chan *Feed)
-	out := make(chan string)
-	for w := 0; w < numWorkers; w++ {
-		go worker(in, out)
-	}
-	for {
-		select {
-		case <-ticker.C:
-			log.Println("tick")
-			crawl(in)
-		case url := <-out:
-			log.Println("crawled", url)
-		case <-done:
-			return
-		}
+// worker crawls a feed it recieves from in chan and reports back to out chan for logging
+func worker(in <-chan *Feed, out chan<- string) {
+	for f := range in {
+		fetchFeed(f)
+		out <- f.url
 	}
 }
 
+// handleCrawl handles the /crawl endpoint
+//
+// Example: GET /crawl?url=https://example.com/feed.xml
+//
+// If crawl is successful, the response will be: code 200, body feed id
+// If crawl is unsuccessful, the response will be: code 400, body error message
 func handleCrawl(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GET %v?%v", r.URL.Path, r.URL.RawQuery)
 	urls, ok := r.URL.Query()["url"]
@@ -155,39 +137,4 @@ func handleCrawl(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "plain/text")
 	log.Printf("OK %v->%v", feed.url, feed.id)
 	fmt.Fprintf(w, "%v\n", feed.id)
-}
-
-func main() {
-
-	done := make(chan bool)
-
-	// init database
-	var err error
-	db, err = pgxpool.Connect(context.Background(), "")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
-		os.Exit(1)
-	}
-	defer db.Close()
-
-	// handle interrupt
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		for sig := range c {
-			if sig == os.Interrupt || sig == syscall.SIGTERM {
-				log.Printf("closing")
-				done <- true
-				db.Close()
-				os.Exit(0)
-			}
-		}
-	}()
-
-	// crawl
-	go crawler(done)
-
-	// server
-	http.HandleFunc("/crawl", handleCrawl)
-	http.ListenAndServe(":9090", nil)
 }

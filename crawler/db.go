@@ -36,12 +36,6 @@ const (
 	`
 )
 
-// Feed represents a feed
-type Feed struct {
-	id  int64
-	url string
-}
-
 var db *pgxpool.Pool
 
 func insertNewFeedOrUpdate(feed string, title string, date *time.Time) int64 {
