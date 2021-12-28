@@ -1,4 +1,4 @@
-import Ctx from '../shared/ctx'
+import Ctx from '../ctx'
 
 export const handleStart = async (ctx: Ctx) => { 
   let str = `Welcome`

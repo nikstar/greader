@@ -1,5 +1,5 @@
-import Ctx from '../shared/ctx'
-import * as DB from '../shared/db'
+import Ctx from '../ctx'
+import * as DB from '../db'
 import parser from 'fast-xml-parser'
 import { readFile, readFileSync } from 'fs'
 import fetch, { Response } from 'node-fetch'

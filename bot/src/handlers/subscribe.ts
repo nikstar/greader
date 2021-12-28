@@ -1,9 +1,9 @@
 import cheerio from 'cheerio'
-import Ctx from '../shared/ctx'
-import * as DB from '../shared/db'
+import Ctx from '../ctx'
+import * as DB from '../db'
 import { env } from 'process'
 import fetch, { Response } from 'node-fetch'
-import sanitize from '../shared/sanitize'
+import sanitize from '../sanitize'
 
 function fixUrl(url: string): string {
   if (!url.match('^https?://')) { 

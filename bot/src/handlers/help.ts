@@ -1,4 +1,4 @@
-import Ctx from '../shared/ctx'
+import Ctx from '../ctx'
 
 const help = `
 <b>Subscribing</b>
