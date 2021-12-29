@@ -12,7 +12,11 @@ export const handleHealth = async (ctx: Ctx) => {
   There are <b>${users}</b> users with <b>${subscriptions}</b> subscriptions. Database contains <b>${feedItems}</b> feed items and takes up <b>${totalSize}</b>.`
   try {
     const resp = await fetch(`http://${process.env.CRAWLER_HOST}:9090/crawl?url=https://xkcd.com/atom.xml`)
-    report += ` Crawler is responding (code=${resp.status}).`
+    if (resp.status != 200) {
+      report += ` Crawler is responding (code=${resp.status}).`
+    } else {
+      report += ` Crawler is responding.`
+    }
   } catch (err) {
     report += ` Crawler is not responding (err=${err}).`
   }
