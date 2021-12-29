@@ -1,5 +1,5 @@
-import Ctx from '../shared/ctx'
-import * as DB from '../shared/db'
+import Ctx from '../ctx'
+import * as DB from '../db'
 
 const head = 
 `<?xml version="1.0" encoding="UTF-8"?>

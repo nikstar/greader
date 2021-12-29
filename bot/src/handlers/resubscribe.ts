@@ -1,5 +1,5 @@
-import Ctx from '../shared/ctx'
-import * as DB from '../shared/db'
+import Ctx from '../ctx'
+import * as DB from '../db'
 import { handleSingleSubscription } from './subscribe'
 
 export const handleResubscribe = async (ctx: Ctx) => { 

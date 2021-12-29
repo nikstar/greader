@@ -1,7 +1,7 @@
 
-import * as DB from './shared/db'
+import * as DB from './db'
 import Telegraf, { Telegram } from 'telegraf'
-import sanitize from './shared/sanitize'
+import sanitize from './sanitize'
 
 export const updateAll = async (t: Telegram) => {
   const res = await DB.feedItems.selectUpdates()

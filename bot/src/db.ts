@@ -32,6 +32,12 @@ class UsersTable extends Table {
     )
     return r.rowCount > 0
   }
+
+  async count(): Promise<number> {
+    const r = await this.db.query(`SELECT COUNT(*) FROM users`)
+    if (r.rowCount == 0) { return -1 }
+    return r.rows[0].count
+  }
 }
 
 class SubscriptionsTable extends Table {
@@ -145,6 +151,12 @@ class SubscriptionsTable extends Table {
       `, 
       [subscription_id])
   }
+
+  async activeCount(): Promise<number> {
+    const r = await this.db.query(`SELECT COUNT(*) FROM subscriptions WHERE active`)
+    if (r.rowCount == 0) { return -1 }
+    return r.rows[0].count
+  }
 }
 
 class FeedsTable extends Table {
@@ -189,6 +201,18 @@ class FeedItemsTable extends Table {
     }
     throw Error(`db: no feeds found for item_url=${url}`)
   }  
+
+  async count(): Promise<number> {
+    const r = await this.db.query(`SELECT COUNT(*) FROM feed_items;`)
+    if (r.rowCount == 0) { return -1 }
+    return r.rows[0].count
+  }
+
+  async totalSize(): Promise<string> {
+    const r = await this.db.query(`SELECT pg_size_pretty(pg_database_size($1));`, [process.env.PGDATABASE])
+    if (r.rowCount == 0) { return '<error>' }
+    return r.rows[0].pg_size_pretty
+  }
 }
 
 class BadFeedsTable extends Table {

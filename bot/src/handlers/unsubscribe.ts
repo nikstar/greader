@@ -1,5 +1,5 @@
-import * as DB from '../shared/db'
-import Ctx from '../shared/ctx'
+import * as DB from '../db'
+import Ctx from '../ctx'
 import { Extra, Markup } from 'telegraf'
 
 const directUnsubscription = async (ctx: Ctx, url: string): Promise<boolean> => {

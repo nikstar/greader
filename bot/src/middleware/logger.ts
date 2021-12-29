@@ -1,5 +1,5 @@
-import Ctx from "../shared/ctx"
-import * as DB from "../shared/db"
+import Ctx from "../ctx"
+import * as DB from "../db"
 
 export default async function log(ctx: Ctx, next: () => any) {
   const start = new Date()

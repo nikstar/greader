@@ -1,5 +1,5 @@
-import Ctx from '../shared/ctx'
-import * as DB from '../shared/db'
+import Ctx from '../ctx'
+import * as DB from '../db'
 
 export const handleList = async (ctx: Ctx) => { 
   console.log('handler: list: ' + ctx.message.text) 

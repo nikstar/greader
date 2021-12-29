@@ -1,5 +1,5 @@
-import Ctx from "../shared/ctx"
-import * as DB from "../shared/db"
+import Ctx from "../ctx"
+import * as DB from "../db"
 
 export default async function userInfo(ctx: Ctx, next: () => any) {
   if (ctx.chat && ctx.from) {  

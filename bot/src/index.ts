@@ -1,8 +1,9 @@
 import Telegraf from 'telegraf'
-import { handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe, handleHelp, handleResubscribe, handleImportFile } from './handlers'
+import { handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe, handleHelp, handleResubscribe, handleImportFile, handleHealth } from './handlers'
 import { updateAll } from './updater'
 import loggerMiddleware from './middleware/logger'
 import userInfoMiddleware from './middleware/user_info'
+import ownerOnly from './middleware/owner_only'
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
@@ -20,6 +21,7 @@ bot.action(/^resubscribe:(.+)/, handleResubscribe)
 bot.action(/^enable_subscription:(.+)/, handleResubscribe)
 bot.command('unsubscribe', handleUnsubscribe)
 bot.command('u', handleUnsubscribe)
+bot.command('health', ownerOnly, handleHealth)
 bot.on('document', handleImportFile)
 bot.on('text', handleSubscribe)
 
