@@ -19,7 +19,11 @@ func fetchFeed(f *Feed) (*gofeed.Feed, error) {
 		normalizeItem(f.url, item)
 	}
 	items := recentItems(feed)
-	f.id = insertNewFeedOrUpdate(f.url, feed.Title, items[len(items)-1].PublishedParsed)
+	if len(items) == 0 {
+        return feed, nil // todo error
+    }
+    f.id = insertNewFeedOrUpdate(f.url, feed.Title, items[len(items)-1].PublishedParsed)
+
 	log.Printf("feed: id=%v url=%v", f.id, f.url)
 
 	for _, item := range items {
