@@ -2,37 +2,51 @@
 
 <img align="right" height=200 src="/cover.png" alt="G Reader" />
 
-G Reader is a simple RSS feed reader bot for Telegram. Check it out here: **[@GReaderBot](https://t.me/GReaderBot)**. I've written [a blog post](https://nikstar.me/post/greader/) describing how it works.
+G Reader is a simple RSS feed reader bot for Telegram. Check it out here: **[@GReaderBot](https://t.me/GReaderBot)**. I have written [a blog post](https://nikstar.me/post/greader/) describing how it works.
 
-G Reader contains three components: TypeScript Telegram bot using [telegraf.js](https://telegraf.js.org/), Go RSS feed crawler, and Postgres database (not part of this repo). Bot talks to the crawler using a webserver and gets updates from the database.
+G Reader consists of three components: 
 
-Bot expects `BOT_TOKEN` and `CRAWLER_HOST` (default localhost) environment variables, and both components support full set of Postgres variables.
+* TypeScript Telegram bot written using [telegraf.js](https://telegraf.js.org/)
+* Go RSS feed crawler
+* Postgres database
 
-## Local development
+The bot communicates with the crawler through a web server and retrieves updates from the database.
 
-**Bot**
+## Installation
 
-*Set environment variables in bot/.env*
+1. Install `docker` and `docker-compose`.
 
-```bash
-cd bot
-npm start
-```
+2. Clone this repository.
 
-**Crawler**
+3. Launch Postgres and restore backup:
+  
+  ```bash
+  docker compose up -d postgres 
+  ./load-backup.sh backup.sql
+  ```
 
-```bash
-cd crawler
-go build
-env $(cat .env) ./crawler
-```
+4. Set environment variables in `.env.docker`: 
+  ```bash
+  cp .env.example .env.docker
+  vim .env.docker
+  ```
 
-## Docker
+  You can get the `BOT_TOKEN` from [@BotFather](https://t.me/BotFather).
 
-Docker can be used with Postges running on host machine. For this behavior set `PGHOST=host` in `.env.docker`.
+  `OWNER_ID` refers to your Telegram user ID. The bot will respond to admin commands from this account.
 
-```bash
-docker-compose up -d
-```
+5. Launch
+  ```bash
+  docker compose up -d
+  docker compose ps
+  docker compose logs -f
+  ```
 
+## License
+
+MIT. Feel free to launch your own instance of this bot but please DO NOT name it "G Reader" to avoid confusion.
+
+## Contributions
+
+PRs are welcome.
 
