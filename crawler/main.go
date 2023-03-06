@@ -29,6 +29,10 @@ func main() {
 	db, err = pgxpool.Connect(context.Background(), "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Printing environment variables and exiting...\n")
+		for _, e := range os.Environ() {
+			fmt.Fprintln(os.Stderr, e)
+		}
 		os.Exit(1)
 	}
 	defer db.Close()

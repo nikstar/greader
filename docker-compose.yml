@@ -8,22 +8,43 @@ services:
         environment: 
             CRAWLER_HOST: crawler
             NODE_ENV: development
-        extra_hosts: 
-            - host:172.17.0.1
+            PGHOST: postgres
+            PGPORT: 5432
+            PGDATABASE: greader
+            PGUSER: docker
+            PGPASSWORD: docker
         ports:
             - 9229:9229
         restart: always
+        depends_on:
+            - crawler
+            - postgres
     
     crawler:
         image: greader-crawler
         build: ./crawler 
         env_file: ./.env.docker
-        extra_hosts: 
-            - host:172.17.0.1
-        hostname: crawler 
-        ports: 
-            - 9090:9090
+        environment: 
+            PGHOST: postgres
+            PGPORT: 5432
+            PGDATABASE: greader
+            PGUSER: docker
+            PGPASSWORD: docker
+        expose:
+            - "9090" 
         restart: always
+        depends_on:
+            - postgres
 
-# expose crawler port to bot instead of to everyone
-# expose: [ "9090" ]
+    postgres:
+        image: postgres:15
+        restart: always
+        environment:
+            POSTGRES_USER: docker
+            POSTGRES_PASSWORD: docker
+            POSTGRES_DB: greader
+        volumes:
+            - ./postgres-data:/var/lib/postgresql/data
+        expose:
+            - "5432"
+
