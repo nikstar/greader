@@ -20,27 +20,27 @@ The bot communicates with the crawler through a web server and retrieves updates
 
 3. Launch Postgres and restore backup:
   
-  ```bash
-  docker compose up -d postgres 
-  ./load-backup.sh backup.sql
-  ```
+    ```bash
+    docker compose up -d postgres 
+    ./load-backup.sh backup.sql
+    ```
 
 4. Set environment variables in `.env.docker`: 
-  ```bash
-  cp .env.example .env.docker
-  vim .env.docker
-  ```
+    ```bash
+    cp .env.example .env.docker
+    vim .env.docker
+    ```
 
-  You can get the `BOT_TOKEN` from [@BotFather](https://t.me/BotFather).
+    You can get `BOT_TOKEN` from [@BotFather](https://t.me/BotFather).
 
-  `OWNER_ID` refers to your Telegram user ID. The bot will respond to admin commands from this account.
+    `OWNER_ID` refers to your Telegram user ID. The bot will respond to admin commands from this account.
 
 5. Launch
-  ```bash
-  docker compose up -d
-  docker compose ps
-  docker compose logs -f
-  ```
+    ```bash
+    docker compose up -d
+    docker compose ps
+    docker compose logs -f
+    ```
 
 ## License
 
