@@ -6,4 +6,5 @@ node_modules
 /crawler/crawler
 /crawler/vendor
 *.sql
+!schema.sql
 postgres-data/

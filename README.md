@@ -22,8 +22,16 @@ The bot communicates with the crawler through a web server and retrieves updates
   
     ```bash
     docker compose up -d postgres 
-    ./load-backup.sh backup.sql
+    ./scripts/load-backup.sh backup.sql
     ```
+
+    or create tables:
+
+    ```bash
+    docker compose up -d postgres 
+    ./scripts/create-tables.sh
+    ```
+
 
 4. Set environment variables in `.env.docker`: 
     ```bash
@@ -36,6 +44,7 @@ The bot communicates with the crawler through a web server and retrieves updates
     `OWNER_ID` refers to your Telegram user ID. The bot will respond to admin commands from this account.
 
 5. Launch
+
     ```bash
     docker compose up -d
     docker compose ps
@@ -44,7 +53,7 @@ The bot communicates with the crawler through a web server and retrieves updates
 
 ## License
 
-MIT. Feel free to launch your own instance of this bot but please DO NOT name it "G Reader" to avoid confusion.
+MIT. Feel free to launch your own instance but please DO NOT name it "G Reader" to avoid confusion.
 
 ## Contributions
 
