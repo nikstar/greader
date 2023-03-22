@@ -159,3 +159,10 @@ export const handleSubscribe = async (ctx: Ctx) => {
     .map(entity => ctx.message.text.substr(entity.offset, entity.length))
     .forEach(async url => await handleSingleSubscription(ctx, url));
 }
+
+
+export const handleText = async (ctx: Ctx) => { 
+  if (ctx.message.chat.type == "private") {
+    handleSubscribe(ctx);
+  }
+}

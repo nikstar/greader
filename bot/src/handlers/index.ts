@@ -3,7 +3,7 @@ import { handleExport } from './export'
 import { handleList } from './list'
 import { handleImportFile } from './import'
 import { handleStart } from './start'
-import { handleSubscribe } from './subscribe'
+import { handleSubscribe, handleText } from './subscribe'
 import { handleResubscribe } from './resubscribe'
 import { handleUnsubscribe } from './unsubscribe'
 import { handleHealth } from './health'
@@ -17,5 +17,6 @@ export {
   handleSubscribe, 
   handleUnsubscribe,
   handleResubscribe,
-  handleHealth
+  handleHealth,
+  handleText
 }
