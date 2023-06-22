@@ -9,17 +9,27 @@ export const handleHealth = async (ctx: Ctx) => {
   const totalSize = await DB.feedItems.totalSize();   
   
   let report = `
-  There are <b>${users}</b> users with <b>${subscriptions}</b> subscriptions. Database contains <b>${feedItems}</b> feed items and takes up <b>${totalSize}</b>.`
+  Users: <b>${users}</b>
+Subscriptions: <b>${subscriptions}</b>
+Feed items: <b>${feedItems}</b>
+Database size: <b>${totalSize}</b>`
   try {
     const resp = await fetch(`http://${process.env.CRAWLER_HOST}:9090/crawl?url=https://xkcd.com/atom.xml`)
     if (resp.status != 200) {
-      report += ` Crawler is responding (code=${resp.status}).`
+      report += `\n\nCrawler is responding (code=${resp.status})`
     } else {
-      report += ` Crawler is responding.`
+      report += `\n\nCrawler is responding`
     }
   } catch (err) {
-    report += ` Crawler is not responding (err=${err}).`
+    report += `\n\nCrawler is not responding (err=${err})`
   }
 
   await ctx.reply(report, { parse_mode: 'HTML', disable_web_page_preview: true })
+
+  const stats = await DB.subscriptions.getStats();
+  var statsString = `User stats:\n\n`
+  stats.forEach(stat => {
+    statsString += `${stat.username == "<null>" ? "" : "@"}${stat.username} (${stat.first_name}): ${stat.total_subscriptions} (${stat.active_subscriptions})\n`
+  });
+  await ctx.reply(statsString, { disable_web_page_preview: true })
 }

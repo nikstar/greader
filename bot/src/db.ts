@@ -40,6 +40,13 @@ class UsersTable extends Table {
   }
 }
 
+export interface SubscriptionStats {
+  username: string;
+  first_name: string;
+  total_subscriptions: number;
+  active_subscriptions: number;
+}
+
 class SubscriptionsTable extends Table {
 
 
@@ -156,6 +163,17 @@ class SubscriptionsTable extends Table {
     const r = await this.db.query(`SELECT COUNT(*) FROM subscriptions WHERE active`)
     if (r.rowCount == 0) { return -1 }
     return r.rows[0].count
+  }
+
+  async getStats(): Promise<SubscriptionStats[]> {
+    const query = `
+      SELECT COALESCE(username, '<null>') AS username, COALESCE(first_name, '<null>') AS first_name, COUNT(*) AS total_subscriptions, SUM(CASE WHEN active THEN 1 ELSE 0 END) AS active_subscriptions
+      FROM subscriptions_view
+      GROUP BY username, first_name
+      ORDER BY total_subscriptions DESC, active_subscriptions DESC;
+    `;
+    const result = await this.db.query(query);
+    return result.rows;
   }
 }
 
