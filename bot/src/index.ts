@@ -1,5 +1,5 @@
-import Telegraf from 'telegraf'
-import { handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe, handleHelp, handleResubscribe, handleImportFile, handleHealth, handleText } from './handlers'
+import { Telegraf } from 'telegraf'
+import { handleApp, handleExport, handleList, handleStart, handleSubscribe, handleUnsubscribe, handleHelp, handleResubscribe, handleImportFile, handleHealth, handleText } from './handlers'
 import { updateAll } from './updater'
 import loggerMiddleware from './middleware/logger'
 import userInfoMiddleware from './middleware/user_info'
@@ -23,6 +23,8 @@ bot.action(/^enable_subscription:(.+)/, handleResubscribe)
 bot.command('unsubscribe', handleUnsubscribe)
 bot.command('u', handleUnsubscribe)
 bot.command('health', ownerOnly, handleHealth)
+bot.command('app', ownerOnly, handleApp)
+
 bot.on('document', handleImportFile)
 bot.on('text', handleText)
 

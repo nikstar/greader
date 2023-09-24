@@ -2,7 +2,6 @@ import cheerio from 'cheerio'
 import Ctx from '../ctx'
 import * as DB from '../db'
 import { env } from 'process'
-import fetch, { Response } from 'node-fetch'
 import sanitize from '../sanitize'
 
 function fixUrl(url: string): string {
@@ -36,7 +35,7 @@ async function findInPage(pageUrl: string): Promise<string> {
     let feedUrl: string = undefined
     html('head>link').each((_, e) => {
       if (feedUrl !== undefined) { /* already done */ return }
-      if (e.attribs['rel'] == 'alternate' && (e.attribs['type'] == 'application/atom+xml' || e.attribs['type'] == 'application/rss+xml')) {
+      if ("attribs" in e && e.attribs['rel'] == 'alternate' && (e.attribs['type'] == 'application/atom+xml' || e.attribs['type'] == 'application/rss+xml')) {
         const rawCandidate = e.attribs['href']
         const candidate = fixRelativeUrl(rawCandidate, pageUrl)
         feedUrl = candidate
@@ -150,14 +149,17 @@ export const handleSingleSubscription = async (ctx: Ctx, url: string) => {
 }
   
 export const handleSubscribe = async (ctx: Ctx) => { 
-  const urls = ctx.message.entities?.filter(entity => entity.type == 'url')
+  const urls = (ctx.message as any).entities?.filter(entity => entity.type == 'url')
   if (urls === undefined || urls.length == 0) {
     await ctx.reply(`Send me links you want to subscribe to`)
     return
   }
-  urls
-    .map(entity => ctx.message.text.substr(entity.offset, entity.length))
-    .forEach(async url => await handleSingleSubscription(ctx, url));
+  if ("text" in ctx.message) {
+    const text = ctx.message.text
+    urls
+      .map(entity => text.substr(entity.offset, entity.length))
+      .forEach(async url => await handleSingleSubscription(ctx, url));
+  }
 }
 
 

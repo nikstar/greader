@@ -7,6 +7,7 @@ import { handleSubscribe, handleText } from './subscribe'
 import { handleResubscribe } from './resubscribe'
 import { handleUnsubscribe } from './unsubscribe'
 import { handleHealth } from './health'
+import { handleApp } from './app'
 
 export { 
   handleHelp,
@@ -18,5 +19,6 @@ export {
   handleUnsubscribe,
   handleResubscribe,
   handleHealth,
-  handleText
+  handleText,
+  handleApp
 }

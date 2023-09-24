@@ -1,6 +1,5 @@
 import Ctx from '../ctx'
 import * as DB from '../db'
-import fetch from 'node-fetch'
 
 export const handleHealth = async (ctx: Ctx) => { 
   const users = await DB.users.count();

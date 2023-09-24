@@ -6,6 +6,6 @@ export default async function log(ctx: Ctx, next: () => any) {
   await next()
   const ms = +(new Date()) - +start
   if (ctx.chat && ctx.message) {
-    await DB.messageLog.insert(ctx.chat.id, ctx.message.text, ms)
+    // await DB.messageLog.insert(ctx.chat.id, ctx.message.text, ms)
   }
 }

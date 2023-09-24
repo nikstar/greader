@@ -2,7 +2,7 @@ import Ctx from '../ctx'
 import * as DB from '../db'
 
 export const handleList = async (ctx: Ctx) => { 
-  console.log('handler: list: ' + ctx.message.text) 
+  // console.log('handler: list: ' + ctx.message.text) 
   const feeds = await DB.subscriptions.selectSubscriptionsForUser(ctx.chat.id)
   if (feeds.length == 0) {
     await ctx.reply(`You don't have any subscriptions. Send me links to subscribe.`)

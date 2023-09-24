@@ -32,7 +32,9 @@ function date(): string {
 }
            
 export const handleExport = async (ctx: Ctx) => { 
-  console.log('handler: export: ' + ctx.message.text) 
+  if ("text" in ctx.message) {
+    console.log('handler: export: ' + ctx.message.text) 
+  }
   const feeds = await DB.subscriptions.selectSubscriptionsForUser(ctx.chat.id)
   if (feeds.length == 0) {
     await ctx.reply(`You don't have any subscriptions. Send me links to subscribe.`)

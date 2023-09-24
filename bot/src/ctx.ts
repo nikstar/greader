@@ -1,4 +1,4 @@
-import { ContextMessageUpdate } from 'telegraf'
+import { Context } from 'telegraf'
 
-export default interface Ctx extends ContextMessageUpdate {
+export default interface Ctx extends Context {
 }

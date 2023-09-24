@@ -1,8 +1,7 @@
 import Ctx from '../ctx'
 import * as DB from '../db'
-import parser from 'fast-xml-parser'
+import { XMLParser } from 'fast-xml-parser'
 import { readFile, readFileSync } from 'fs'
-import fetch, { Response } from 'node-fetch'
 import { env } from 'process'
 
 
@@ -38,17 +37,21 @@ async function quickSubscribe(url: string): Promise<number> {
 }
 
 export async function handleImportFile(ctx: Ctx) {
-  if (!ctx.message?.document) { return }
+  var document = null
+  if ("document" in ctx.message) { 
+    document = ctx.message.document
+  }
+  if (!document) { 
+    return 
+  }
   try {
-    const fileUrl = await ctx.telegram.getFileLink(ctx.message.document.file_id)
+    const fileUrl = await ctx.telegram.getFileLink(document.file_id)
     console.log(fileUrl)
     const data = await (await fetch(fileUrl)).text()
-    let parsed = parser.parse(data, {
-      attributeNamePrefix: '@',
-      ignoreAttributes: false 
-    })
-    const urls = collectUrls(parsed.opml.body)
-    if (urls.length == 0) {
+    let parser = new XMLParser();
+    let parsed = parser.parse(data)
+    const urls = collectUrls((parsed as any).opml.body)
+    if (urls && urls.length == 0) {
       throw 'Empty file'
     }
 

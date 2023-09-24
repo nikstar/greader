@@ -14,22 +14,19 @@
   "author": "nikstar",
   "license": "MIT",
   "dependencies": {
-    "cheerio": "^1.0.0-rc.3",
-    "fast-xml-parser": "^3.17.4",
-    "node-fetch": "^2.6.1",
-    "pg": "^8.0.0",
-    "telegraf": "^3.37.0",
-    "telegraf-i18n": "^6.6.0"
+    "cheerio": "^1.0.0-rc.12",
+    "fast-xml-parser": "^4",
+    "pg": "^8",
+    "telegraf": "^4"
   },
   "devDependencies": {
-    "@types/cheerio": "^0.22.17",
-    "@types/node": "^13.13.3",
-    "@types/node-fetch": "^2.5.7",
-    "@types/pg": "^7.14.3",
-    "@typescript-eslint/eslint-plugin": "^4.28.3",
-    "@typescript-eslint/parser": "^4.28.3",
-    "dotenv": "^8.2.0",
-    "eslint": "^7.31.0",
-    "typescript": "^3.9.10"
+    "@types/cheerio": "^0",
+    "@types/node": "^20",
+    "@types/pg": "^8",
+    "@typescript-eslint/eslint-plugin": "^6",
+    "@typescript-eslint/parser": "^6",
+    "dotenv": "^16",
+    "eslint": "^8",
+    "typescript": "^5"
   }
 }
