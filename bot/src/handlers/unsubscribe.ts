@@ -1,6 +1,7 @@
 import * as DB from '../db'
 import Ctx from '../ctx'
 import { Markup } from 'telegraf'
+import { manageSubsButton } from './app'
 
 const directUnsubscription = async (ctx: Ctx, url: string): Promise<boolean> => {
   console.log(`Unsubscribing ${ctx.chat.id} from ${url}`)
@@ -39,7 +40,7 @@ const handleUnsubscriptionReply = async (ctx: Ctx): Promise<boolean> => {
   }
 }
   
-const help = `To unsubscribe you can <b>reply</b> /unsubscribe (/u) to an item in the feed you want to unsubscribe from, or send a feed url directly: /u https://example.com/feed.xml`
+const help = `Reply “/unsubscribe” to an article, or tap the button below`
 
 export const handleUnsubscribe = async (ctx: Ctx) => { 
   
@@ -54,7 +55,7 @@ export const handleUnsubscribe = async (ctx: Ctx) => {
     urls = ctx.message.entities?.filter(entity => entity.type == 'url')
   }
   if (urls.length == 0) {
-    await ctx.replyWithHTML(help, Markup.removeKeyboard())
+    await ctx.replyWithHTML(help, await manageSubsButton(ctx))
     return
   }
 
@@ -66,7 +67,7 @@ export const handleUnsubscribe = async (ctx: Ctx) => {
       .filter(async token => await token)
 
     if (found.length == 0) {
-      await ctx.replyWithHTML(`Could not unsubscribe. ` + help)
+      await ctx.replyWithHTML(`Could not unsubscribe. ` + help, await manageSubsButton(ctx))
     }
   }
 }

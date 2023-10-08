@@ -48,3 +48,22 @@ services:
         expose:
             - "5432"
 
+    api:
+        image: greader-api
+        build: ./api 
+        env_file: ./.env.docker
+        environment: 
+            NODE_ENV: development
+            PGHOST: postgres
+            PGPORT: 5432
+            PGDATABASE: greader
+            PGUSER: docker
+            PGPASSWORD: docker
+        ports:
+            - 14000:14000
+            - 19229:9229
+
+        restart: always
+        depends_on:
+            - postgres
+

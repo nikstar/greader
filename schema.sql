@@ -16,6 +16,22 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: api; Type: TABLE; Schema: public; Owner: docker
+--
+
+CREATE TABLE public.api (
+    chat_id text,
+    hash text
+);
+
+
+ALTER TABLE public.api OWNER TO docker;
+
 --
 -- Name: bad_feeds_id_seq; Type: SEQUENCE; Schema: public; Owner: docker
 --
@@ -29,10 +45,6 @@ CREATE SEQUENCE public.bad_feeds_id_seq
 
 
 ALTER TABLE public.bad_feeds_id_seq OWNER TO docker;
-
-SET default_tablespace = '';
-
-SET default_table_access_method = heap;
 
 --
 -- Name: bad_feeds; Type: TABLE; Schema: public; Owner: docker
@@ -301,6 +313,14 @@ ALTER TABLE ONLY public.message_log ALTER COLUMN id SET DEFAULT nextval('public.
 --
 
 ALTER TABLE ONLY public.subscriptions ALTER COLUMN id SET DEFAULT nextval('public.untitled_table_179_id_seq'::regclass);
+
+
+--
+-- Name: api api_chat_id_unique; Type: CONSTRAINT; Schema: public; Owner: docker
+--
+
+ALTER TABLE ONLY public.api
+    ADD CONSTRAINT api_chat_id_unique UNIQUE (chat_id);
 
 
 --

@@ -1,5 +1,6 @@
 import Ctx from '../ctx'
 import * as DB from '../db'
+import { manageSubsButton } from './app'
 
 export const handleList = async (ctx: Ctx) => { 
   // console.log('handler: list: ' + ctx.message.text) 
@@ -12,5 +13,6 @@ export const handleList = async (ctx: Ctx) => {
   feeds.forEach((row, idx) => {
     msg += `${idx + 1}. <a href="${row.url}">${row.title}</a>\n`
   })
-  await ctx.reply(msg, { parse_mode: 'HTML' })
+  await ctx.reply(msg, { ...(await manageSubsButton(ctx)), parse_mode: 'HTML', disable_web_page_preview: true })
+  
 }

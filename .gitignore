@@ -8,3 +8,5 @@ node_modules
 *.sql
 !schema.sql
 postgres-data/
+.vscode
+.nvmrc

@@ -11,6 +11,7 @@ RSS feed reader bot that follows websites and sends you updates
 
 
 Commands:
+manage - Manage subsciptions
 list - List subsciptions
-unsubscribe - Reply to an article to unsubscribe
+unsubscribe - Reply to unsubscribe
 help - Show help

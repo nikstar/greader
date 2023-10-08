@@ -19,7 +19,7 @@ export class Feed {
 
 class UsersTable extends Table {
   async insert(chat_id: string|number, lang: string, username: string, first_name: string): Promise<boolean> {
-    const r = await this.db.query(`
+    const r1 = await this.db.query(`
       INSERT INTO users (chat_id, lang, username, first_name) 
       VALUES            ($1,      $2,   $3,       $4) 
       ON CONFLICT (chat_id) DO 
@@ -30,13 +30,30 @@ class UsersTable extends Table {
         ;`, 
       [chat_id, lang, username, first_name]
     )
-    return r.rowCount > 0
+    const r2 = await this.db.query(`
+      INSERT INTO api (chat_id, hash               ) 
+      VALUES          ($1,      md5(random()::text)) 
+      ON CONFLICT (chat_id) DO NOTHING
+       ;`, 
+      [chat_id]
+    )
+    console.log(`insert new hash: ${r2.rowCount}, ${r2.rows}`)
+    return r1.rowCount > 0
   }
 
   async count(): Promise<number> {
     const r = await this.db.query(`SELECT COUNT(*) FROM users`)
     if (r.rowCount == 0) { return -1 }
     return r.rows[0].count
+  }
+
+  async hash(chat_id: string|number): Promise<string> {
+    const r = await this.db.query(`
+      SELECT hash
+      FROM api
+      WHERE chat_id = $1;
+    `, [chat_id])
+    return (r.rowCount) ? r.rows[0].hash : undefined
   }
 }
 

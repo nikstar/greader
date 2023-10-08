@@ -24,6 +24,7 @@ bot.command('unsubscribe', handleUnsubscribe)
 bot.command('u', handleUnsubscribe)
 bot.command('health', ownerOnly, handleHealth)
 bot.command('app', ownerOnly, handleApp)
+bot.command('manage', handleApp)
 
 bot.on('document', handleImportFile)
 bot.on('text', handleText)
