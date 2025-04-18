@@ -26,9 +26,12 @@ Database size: <b>${totalSize}</b>`
   await ctx.reply(report, { parse_mode: 'HTML', disable_web_page_preview: true })
 
   const stats = await DB.subscriptions.getStats();
-  var statsString = `User stats:\n\n`
-  stats.forEach(stat => {
-    statsString += `${stat.username == "<null>" ? "" : "@"}${stat.username} (${stat.first_name}): ${stat.total_subscriptions} (${stat.active_subscriptions})\n`
+  var statsString = `User stats (top 40):
+
+`
+  stats.slice(0, 40).forEach(stat => {
+    statsString += `${stat.username == "<null>" ? "" : "@"}${stat.username} (${stat.first_name}): ${stat.total_subscriptions} (${stat.active_subscriptions})
+`
   });
   await ctx.reply(statsString, { disable_web_page_preview: true })
 }
