@@ -1,4 +1,5 @@
 import { Client } from 'pg'
+import { subscriptionLimitError } from './subscription-limit'
 
 class Table {
   db: Client
@@ -65,7 +66,17 @@ export interface SubscriptionStats {
 }
 
 class SubscriptionsTable extends Table {
-
+  async assertCanSubscribe(chat_id: string|number): Promise<void> {
+    const result = await this.db.query(`
+      SELECT active_count, subscription_limit FROM subscription_limits WHERE chat_id = $1
+    `, [chat_id])
+    const policy = result.rows[0]
+    if (policy && policy.subscription_limit !== null && policy.active_count >= policy.subscription_limit) {
+      throw subscriptionLimitError()
+    }
+    // This is only an early UX check. Database triggers enforce the limit
+    // atomically for all writes, including concurrent API requests.
+  }
 
   // todo: this may cause a message to be sent immediately if the last item has a date in the future
   // e.g. https://dortania.github.io/hackintosh/updates/2020/12/10/bigsur-new.html

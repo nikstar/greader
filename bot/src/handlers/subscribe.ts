@@ -3,6 +3,7 @@ import Ctx from '../ctx'
 import * as DB from '../db'
 import { env } from 'process'
 import sanitize from '../sanitize'
+import { isSubscriptionLimitError, subscriptionLimitMessage } from '../subscription-limit'
 
 function fixUrl(url: string): string {
   if (!url.match('^https?://')) { 
@@ -89,6 +90,7 @@ export const handleSingleSubscription = async (ctx: Ctx, url: string) => {
   const crawlerHost = env['CRAWLER_HOST'] || 'localhost'
         
   try {
+    await DB.subscriptions.assertCanSubscribe(ctx.chat.id)
     let candidateUrl = fixUrl(url)
     let resp: Response = null // final response to be handled
 
@@ -126,23 +128,27 @@ export const handleSingleSubscription = async (ctx: Ctx, url: string) => {
 
     // out of options. what do we have?
     if (resp?.status != 200) {
-      throw Error(`Subscription failed: url=${resp.url} status=${resp.status}`)
+      throw Error(`Subscription failed: url=${candidateUrl} status=${resp?.status}`)
     }
     const feed_id = Number(await resp.text())
     const title = await DB.feeds.selectFeedTitle(feed_id)
     const items = await DB.feedItems.selectTenMostRecent(feed_id)    
     // TODO: change candidateUrl to titleUrl, which should be stored in subscriptions table
-    let str = `<a href="${items[0].url}">⁠</a>Subscribed to <b><a href="${candidateUrl}">${sanitize(title)}</a></b>\n\nRecent posts:\n`
+    const subscription_id = await DB.subscriptions.insertNewOrUpdateLastSent(ctx.chat.id, feed_id)
+    let str = `Subscribed to <b><a href="${candidateUrl}">${sanitize(title)}</a></b>`
+    if (items.length) str = `<a href="${items[0].url}">⁠</a>${str}\n\nRecent posts:\n`
     items.forEach(item => {
       str += `→ <a href="${item.url}">${sanitize(item.title)}</a>\n`
     })
-    str += `\nLatest post:`
+    if (items.length) str += `\nLatest post:`
     const msg = await ctx.reply(str, { parse_mode: 'HTML', disable_web_page_preview: false })
-    const subscription_id = await DB.subscriptions.insertNewOrUpdateLastSent(ctx.chat.id, feed_id)
     await DB.unsubscriptions.insert(msg.chat.id, msg.message_id, subscription_id)
   
   } catch (err) { // report fail to the user
-    
+    if (isSubscriptionLimitError(err)) {
+      await ctx.reply(subscriptionLimitMessage)
+      return
+    }
     await DB.badFeeds.insert(ctx.chat.id, url, err)
     await ctx.reply(`Could not load ${url}. Try sending a direct link to the feed`, { disable_web_page_preview: true })
   }
@@ -156,15 +162,15 @@ export const handleSubscribe = async (ctx: Ctx) => {
   }
   if ("text" in ctx.message) {
     const text = ctx.message.text
-    urls
-      .map(entity => text.substr(entity.offset, entity.length))
-      .forEach(async url => await handleSingleSubscription(ctx, url));
+    for (const entity of urls) {
+      await handleSingleSubscription(ctx, text.substr(entity.offset, entity.length))
+    }
   }
 }
 
 
 export const handleText = async (ctx: Ctx) => { 
   if (ctx.message.chat.type == "private") {
-    handleSubscribe(ctx);
+    await handleSubscribe(ctx);
   }
 }

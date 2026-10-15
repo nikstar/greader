@@ -7,8 +7,8 @@ export const handleResubscribe = async (ctx: Ctx) => {
     if ("match" in ctx) {
       const id = ctx.match[1]
       const url = await DB.subscriptions.selectURLForID(id)
-      ctx.answerCbQuery(`Resubscribing to ${url}`)
-      handleSingleSubscription(ctx, url)
+      await ctx.answerCbQuery(`Resubscribing to ${url}`)
+      await handleSingleSubscription(ctx, url)
     }
   } catch(err) {
     console.log(`hanleResubscribe: ${err}`)

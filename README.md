@@ -103,13 +103,23 @@ Follow these steps to run a custom instance. Remember to modify urls of your web
 
     Get `BOT_TOKEN` from [@BotFather](https://t.me/BotFather). `OWNER_ID` refers to your Telegram user ID. The bot will respond to admin commands from that account.
 
-5. Launch
+5. Apply the subscription limit migration once (also required when upgrading an existing database):
+
+    ```bash
+    docker compose exec -T postgres psql -U docker -d greader -v owner_chat_id=YOUR_TELEGRAM_USER_ID < migrations/001-subscription-limits.sql
+    ```
+
+    Each chat is limited to 100 active subscriptions. Set `owner_chat_id` to the same private user ID as `OWNER_ID`; only this chat is exempt. The database enforces the limit for bot commands, OPML imports, and API resubscriptions, including concurrent requests. Existing over-limit chats keep their subscriptions until an administrator handles them; the migration does not unsubscribe anyone. The `subscription_limits` counters are maintained by triggers and should not be edited manually.
+
+6. Launch
 
     ```bash
     docker compose up -d
     docker compose ps
     docker compose logs -f
     ```
+
+Run the bot's unit tests with `cd bot && npm test`. After building the bot image, run `bash scripts/test-subscription-limits.sh greader-bot:latest` from the repository root to test the migration, concurrent activations, imports, and owner exemption in a disposable Postgres container. This test does not access the production database or Telegram.
 
 ## License
 

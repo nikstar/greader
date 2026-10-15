@@ -4,6 +4,7 @@ import { manageSubsButton } from './app'
 const help = `
 <b>Subscribing</b>
 Send links to subscribe. No need to use any commands in private chat, but you can use /subscribe or /s in groups. G Reader can import OPML files from other RSS readers. 
+Each chat can have up to 100 active subscriptions.
 
 <b>Unsubscribing</b>
 To unsubscribe, <b>reply</b> /unsubscribe or /u to any message in the feed you want to unsubscribe from. Alternatively, provide a feed link direcly, e.g. /u example.com/feed.xml, or use the button below.

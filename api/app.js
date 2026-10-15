@@ -80,10 +80,11 @@ app.get('/api/:hash/unsubscribe/:id', async (request, response) => {
 })
 
 app.get('/api/:hash/resubscribe/:id', async (request, response) => {
+    let client
     try {
         const { hash, id } = request.params
         const chat_id = await getId(hash)
-        const client = await pool.connect()
+        client = await pool.connect()
         const result = await client.query(`
             UPDATE subscriptions 
             SET active = true 
@@ -91,9 +92,14 @@ app.get('/api/:hash/resubscribe/:id', async (request, response) => {
             RETURNING id
         `, [chat_id, id])
         response.json({ subscriptions: result.rows })
-        client.release()
     } catch (error) {
-        response.status(500).json({ error })
+        if (error.code === 'P0001' && error.message === 'SUBSCRIPTION_LIMIT_REACHED') {
+            response.status(409).json({ error: 'This chat has reached the limit of 100 active subscriptions. Unsubscribe from a feed before adding another.' })
+        } else {
+            response.status(500).json({ error: 'Could not resubscribe. Please try again.' })
+        }
+    } finally {
+        client?.release()
     }
 })
 

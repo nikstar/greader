@@ -1,28 +1,6 @@
 import Ctx from '../ctx'
 import * as DB from '../db'
-
-const head = 
-`<?xml version="1.0" encoding="UTF-8"?>
-<opml version="1.0">
-  <head>
-    <title>Export from @GReaderBot</title>
-  </head>
-  <body>
-`
-
-const tail = 
-`  </body>
-</opml>
-`
-
-function generateOPML(feeds: DB.Feed[]): string {
-  let opml = head
-  feeds.forEach(feed => {
-    opml += `    <outline type="rss" text="" title="${feed.title}" xmlUrl="${feed.url}"/>\n` // htmlUrl="..."
-  })
-  opml += tail 
-  return opml
-}
+import { generateOPML } from '../opml'
 
 function date(): string {
   const d = new Date()

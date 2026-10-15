@@ -1,8 +1,8 @@
 import Ctx from '../ctx'
 import * as DB from '../db'
-import { XMLParser } from 'fast-xml-parser'
-import { readFile, readFileSync } from 'fs'
+import { XMLParser, XMLValidator } from 'fast-xml-parser'
 import { env } from 'process'
+import { isSubscriptionLimitError, subscriptionLimitMessage } from '../subscription-limit'
 
 
 function collectUrls(node: any): string[] {
@@ -45,12 +45,13 @@ export async function handleImportFile(ctx: Ctx) {
     return 
   }
   try {
+    await DB.subscriptions.assertCanSubscribe(ctx.chat.id)
     const fileUrl = await ctx.telegram.getFileLink(document.file_id)
-    console.log(fileUrl)
     const data = await (await fetch(fileUrl)).text()
-    let parser = new XMLParser();
+    if (XMLValidator.validate(data) !== true) throw Error('Invalid OPML XML')
+    let parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@' });
     let parsed = parser.parse(data)
-    const urls = collectUrls((parsed as any).opml.body)
+    const urls = [...new Set(collectUrls((parsed as any).opml.body))]
     if (urls && urls.length == 0) {
       throw 'Empty file'
     }
@@ -58,30 +59,37 @@ export async function handleImportFile(ctx: Ctx) {
     const msg = await ctx.reply(`Found ${urls.length} feeds, checking them right now`, { parse_mode: 'HTML', disable_web_page_preview: true })
       
     let issues: string[] = []
+    let okFeeds = 0
+    let skipped = 0
     for (const feedUrl of urls) {
-      const feed_id = await quickSubscribe(feedUrl)
-      if (feed_id) {
-        await DB.subscriptions.insertNewOrActivate(ctx.chat.id, feed_id)
-      } else {
-        issues.push(feedUrl)
+      try {
+        await DB.subscriptions.assertCanSubscribe(ctx.chat.id)
+        const feed_id = await quickSubscribe(feedUrl)
+        if (feed_id) {
+          await DB.subscriptions.insertNewOrActivate(ctx.chat.id, feed_id)
+          okFeeds++
+        } else {
+          issues.push(feedUrl)
+        }
+      } catch (err) {
+        if (!isSubscriptionLimitError(err)) throw err
+        skipped = urls.length - okFeeds - issues.length
+        break
       }
     }
 
-    const okFeeds = urls.length - issues.length
-    let str = ``
-    if (issues.length > 0) {
-      str = `Imported ${okFeeds} feeds\n\nFailed to import following feeds:\n`
-      for (const issue of issues) {
-        str += `${issue}\n`
-      }
-    } else {
-      str = `Successfully imported ${okFeeds} feeds`
-    } 
+    let str = `Imported ${okFeeds} feeds.`
+    if (issues.length) str += `\nCould not load ${issues.length} feeds.`
+    if (skipped) str += `\nSkipped ${skipped} feeds because the subscription limit was reached.\n\n${subscriptionLimitMessage}`
 
     await ctx.telegram.editMessageText(ctx.chat.id, msg.message_id, null, str, { disable_web_page_preview: true })
     
   } catch (err) {
+    if (isSubscriptionLimitError(err)) {
+      await ctx.reply(subscriptionLimitMessage)
+      return
+    }
     console.log(err)
-    ctx.reply(`Could not import any feeds\n\n<i>Error: ${err}</i>`, { parse_mode: 'HTML', disable_web_page_preview: true })
+    await ctx.reply('Import could not be completed. Any feeds already imported are in /list. Please check that the file is valid OPML.', { disable_web_page_preview: true })
   }
 }

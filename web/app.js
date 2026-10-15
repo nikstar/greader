@@ -41,9 +41,17 @@ const resubscribe = async (id) => {
     try {
         console.log(`resubscribe id: ${id}`)
         // await sleep(5000)
-        await fetch(baseUrl + `/resubscribe/${id}`)
+        const response = await fetch(baseUrl + `/resubscribe/${id}`)
+        if (!response.ok) {
+            const body = await response.json()
+            WebApp.showAlert(typeof body.error === 'string' ? body.error : 'Could not resubscribe. Please try again.')
+            return false
+        }
+        return true
     } catch (error) {
         console.log(`resubscribe error: ${error}`)
+        WebApp.showAlert('Could not resubscribe. Please try again.')
+        return false
     }
 }
 
@@ -133,7 +141,7 @@ const loadSubscriptions = async () => {
                         <div> Resubscribe </div>
                     `
                 } else {
-                    await resubscribe(id)
+                    if (!await resubscribe(id)) return
                     const div = document.getElementById(tagId)
                     div.classList.remove("unsub")
                     button.innerHTML = `
@@ -200,4 +208,4 @@ async function watchSearch() {
     loadSubscriptions()
     setUserpic()
     watchSearch()
-})();   
+})();
