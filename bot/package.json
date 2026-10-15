@@ -5,6 +5,7 @@
   "main": "index.ts",
   "scripts": {
     "tsc": "tsc",
+    "test": "npm run tsc && node --test test/*.test.cjs",
     "start": "npm run tsc && node -r dotenv/config .build/index.js"
   },
   "repository": {

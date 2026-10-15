@@ -29,7 +29,13 @@ bot.command('manage', handleApp)
 bot.on('document', handleImportFile)
 bot.on('text', handleText)
 
-updateAll(bot.telegram)
-setInterval(() => updateAll(bot.telegram), 30 * 1000)
+const pollUpdates = () => {
+  updateAll(bot.telegram).catch(e => {
+    console.log(`updater: update check failed: ${e}`)
+  })
+}
+
+pollUpdates()
+setInterval(pollUpdates, 30 * 1000)
 
 bot.launch()
