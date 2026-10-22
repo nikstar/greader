@@ -124,6 +124,8 @@ Run the bot's unit tests with `cd bot && npm test`. After building the bot image
 
 ## Delivery behavior
 
+The crawler deduplicates by GUID and also by an exact match of title, URL, and publication date within the same feed. This prevents publishers that regenerate GUIDs on every request from creating repeated notifications. A shared URL alone does not suppress an item with a different title or date. Feed writes are transactional and serialized per feed so concurrent crawls cannot insert copies. This check uses retained feed items; it is not a permanent archive of every item ever seen. Run `bash scripts/test-crawler.sh greader-crawler:latest` after building the crawler image to test this against disposable Postgres, including a changing-GUID error feed and concurrent crawls.
+
 Delivery is best effort. A persistent queue tracks each subscription/item pair. Temporary server and pre-connection failures get at most three attempts, with 30-second and 120-second backoff; Telegram's `retry_after` is a minimum wait. Pending work expires after one hour. Ambiguous timeouts, connection resets, and interrupted in-flight sends are skipped because Telegram may already have accepted them. A database failure after a successful send never triggers another send. `/health` reports paused chats, pending work, and skipped items in the last 24 hours.
 
 Blocked/deactivated users, removed bots, and missing chats have their active subscriptions paused and saved. Private users can unblock the bot and send `/start` to resume; restoring group membership resumes that group's automatically paused subscriptions. Resuming starts with new items and respects the 100-subscription cap. Manual unsubscriptions remain unsubscribed.

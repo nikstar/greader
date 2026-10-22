@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
-	"time"
 
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/mmcdole/gofeed"
 )
@@ -12,7 +13,11 @@ import (
 const (
 	stmntInsertNewFeedItemOrDoNothing = `
 	INSERT INTO feed_items (feed_id, guid,  title, url, date) 
-	VALUES                 ($1,      $2,    $3,    $4,  $5) 
+	SELECT $1, $2, $3, $4, $5
+	WHERE NOT EXISTS (
+		SELECT 1 FROM feed_items
+		WHERE feed_id=$1 AND title=$3 AND url=$4 AND date=$5
+	)
 	ON CONFLICT DO NOTHING
 	RETURNING (id);
 	`
@@ -38,23 +43,41 @@ const (
 
 var db *pgxpool.Pool
 
-func insertNewFeedOrUpdate(feed string, title string, date *time.Time) int64 {
-	var id int64
-	err := db.QueryRow(context.Background(), stmntInsertNewFeedOrUpdate, feed, title, date).Scan(&id)
+// storeFeed serializes each feed's writes and stores one copy of an entry even
+// when a publisher changes its GUID on every request. The feed upsert holds a
+// row lock until commit, so the following item queries see the previous crawl's
+// committed inserts, including when /crawl overlaps the scheduled crawler.
+func storeFeed(feed string, title string, items []*gofeed.Item) (int64, error) {
+	ctx := context.Background()
+	tx, err := db.Begin(ctx)
 	if err != nil {
-		log.Println("error: insertNewFeedOrUpdate:", feed, title, err)
+		return 0, err
 	}
-	return id
-}
+	defer tx.Rollback(ctx)
 
-func insertNewFeedItemOrDoNothing(feedID int64, item *gofeed.Item) bool {
-	var rowID int64
-	err := db.QueryRow(context.Background(), stmntInsertNewFeedItemOrDoNothing, feedID, item.GUID, item.Title, item.Link, item.PublishedParsed).Scan(&rowID)
+	var id int64
+	err = tx.QueryRow(ctx, stmntInsertNewFeedOrUpdate, feed, title, items[len(items)-1].PublishedParsed).Scan(&id)
 	if err != nil {
-		return false
+		return 0, fmt.Errorf("store feed: %w", err)
 	}
-	log.Printf("added new item: feed=%v id=%v item=%v", feedID, rowID, item.Link)
-	return rowID != 0
+
+	inserted := 0
+	for _, item := range items {
+		var rowID int64
+		err := tx.QueryRow(ctx, stmntInsertNewFeedItemOrDoNothing, id, item.GUID, item.Title, item.Link, item.PublishedParsed).Scan(&rowID)
+		if err == pgx.ErrNoRows {
+			continue
+		}
+		if err != nil {
+			return 0, fmt.Errorf("store item for feed %d: %w", id, err)
+		}
+		inserted++
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, err
+	}
+	log.Printf("stored feed: id=%d new_items=%d", id, inserted)
+	return id, nil
 }
 
 func selectOutdated() ([]*Feed, error) {
