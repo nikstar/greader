@@ -167,7 +167,7 @@ class SubscriptionsTable extends Table {
   async updateInactiveByUrl(chat_id: string|number, url: string): Promise<number> {
     const r = await this.db.query(`
       UPDATE subscriptions 
-      SET active = false 
+      SET active = false, delivery_paused = false
       FROM feeds
       WHERE chat_id = $1 AND feed_id = feeds.id AND feeds.url = $2 
       RETURNING subscriptions.id`, 
@@ -181,7 +181,7 @@ class SubscriptionsTable extends Table {
   async updateInactiveDirect(subscription_id: number) {
     await this.db.query(`
       UPDATE subscriptions 
-      SET active = false 
+      SET active = false, delivery_paused = false
       WHERE id = $1
       `, 
       [subscription_id])

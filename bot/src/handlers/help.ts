@@ -5,6 +5,7 @@ const help = `
 <b>Subscribing</b>
 Send links to subscribe. No need to use any commands in private chat, but you can use /subscribe or /s in groups. G Reader can import OPML files from other RSS readers. 
 Each chat can have up to 100 active subscriptions.
+If you block the bot, your subscriptions are paused. Unblock it and send /start to resume with new items.
 
 <b>Unsubscribing</b>
 To unsubscribe, <b>reply</b> /unsubscribe or /u to any message in the feed you want to unsubscribe from. Alternatively, provide a feed link direcly, e.g. /u example.com/feed.xml, or use the button below.

@@ -107,6 +107,7 @@ Follow these steps to run a custom instance. Remember to modify urls of your web
 
     ```bash
     docker compose exec -T postgres psql -U docker -d greader -v owner_chat_id=YOUR_TELEGRAM_USER_ID < migrations/001-subscription-limits.sql
+    docker compose exec -T postgres psql -U docker -d greader < migrations/002-delivery-state.sql
     ```
 
     Each chat is limited to 100 active subscriptions. Set `owner_chat_id` to the same private user ID as `OWNER_ID`; only this chat is exempt. The database enforces the limit for bot commands, OPML imports, and API resubscriptions, including concurrent requests. Existing over-limit chats keep their subscriptions until an administrator handles them; the migration does not unsubscribe anyone. The `subscription_limits` counters are maintained by triggers and should not be edited manually.
@@ -120,6 +121,16 @@ Follow these steps to run a custom instance. Remember to modify urls of your web
     ```
 
 Run the bot's unit tests with `cd bot && npm test`. After building the bot image, run `bash scripts/test-subscription-limits.sh greader-bot:latest` from the repository root to test the migration, concurrent activations, imports, and owner exemption in a disposable Postgres container. This test does not access the production database or Telegram.
+
+## Delivery behavior
+
+Delivery is best effort. A persistent queue tracks each subscription/item pair. Temporary server and pre-connection failures get at most three attempts, with 30-second and 120-second backoff; Telegram's `retry_after` is a minimum wait. Pending work expires after one hour. Ambiguous timeouts, connection resets, and interrupted in-flight sends are skipped because Telegram may already have accepted them. A database failure after a successful send never triggers another send. `/health` reports paused chats, pending work, and skipped items in the last 24 hours.
+
+Blocked/deactivated users, removed bots, and missing chats have their active subscriptions paused and saved. Private users can unblock the bot and send `/start` to resume; restoring group membership resumes that group's automatically paused subscriptions. Resuming starts with new items and respects the 100-subscription cap. Manual unsubscriptions remain unsubscribed.
+
+Group migration notifications and `migrate_to_chat_id` errors move subscriptions to the new group, merge overlapping feeds, and preserve API access through existing links. If merging would exceed the cap, the subscriptions are saved paused; restoring membership resumes up to the cap. Message sends are paced per chat, and a database lock prevents overlapping workers. Queue snapshots survive feed-item cleanup; completed/skipped records are pruned after seven days.
+
+Apply migration 002 once with the bot and API stopped, then deploy the matching bot and API images. It preserves existing pending work and initializes insertion-ID cursors. The isolated test script exercises both migrations and delivery recovery. Protocol fields are documented in the [Telegram Bot API](https://core.telegram.org/bots/api#responseparameters).
 
 ## License
 

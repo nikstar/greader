@@ -18,7 +18,8 @@ const pool = process.env.PGHOST ? new pg.Pool() : new pg.Pool({
 
 const getId = async (hash) => {
     const client = await pool.connect()
-    const result = await client.query('SELECT chat_id FROM api WHERE hash = $1 LIMIT 1;', [hash])
+    const result = await client.query(`SELECT coalesce(u.migrated_to_chat_id,a.chat_id) AS chat_id
+        FROM api a JOIN users u ON u.chat_id=a.chat_id WHERE a.hash=$1 LIMIT 1`, [hash])
     client.release()
     if (result.rowCount) {
         const chat_id = result.rows[0].chat_id
@@ -68,7 +69,7 @@ app.get('/api/:hash/unsubscribe/:id', async (request, response) => {
         const client = await pool.connect()
         const result = await client.query(`
             UPDATE subscriptions 
-            SET active = false 
+            SET active = false, delivery_paused = false
             WHERE chat_id = $1 AND id = $2
             RETURNING id
         `, [chat_id, id])

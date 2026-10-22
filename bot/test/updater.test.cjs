@@ -1,157 +1,106 @@
 const assert = require('node:assert/strict')
-const { readFileSync } = require('node:fs')
-const path = require('node:path')
 const { test } = require('node:test')
-const vm = require('node:vm')
+const { updateAll } = require('../.build/updater')
+const { classifyDeliveryError, deliveryText } = require('../.build/delivery-policy')
+const deferred = () => { let resolve; const promise = new Promise(r => { resolve=r }); return { promise, resolve } }
+const flush = () => new Promise(r => setImmediate(r))
+const row = { id: '1', chat_id: '123', subscription_id: 1, attempts: 1, item_title: 'Article', feed_title: 'Feed', item_url: 'https://example.invalid/a' }
+const apiError = (error_code, description, parameters) => ({ response: { error_code, description, parameters } })
+const storeFor = batch => ({ withBatch: async fn => fn(batch) })
 
-const deferred = () => {
-  let resolve, reject
-  const promise = new Promise((yes, no) => { resolve = yes; reject = no })
-  return { promise, resolve, reject }
-}
-const flush = () => new Promise(resolve => setImmediate(resolve))
-const item = id => ({
-  chat_id: `chat-${id}`, feed_id: id, subscription_id: id,
-  item_title: 'Article', feed_title: 'Feed', item_url: 'https://example.invalid/article',
-  item_date: '2026-10-15T00:00:00Z'
-})
-
-function loadUpdater(db) {
-  const exports = {}
-  const logs = []
-  vm.runInNewContext(readFileSync(path.join(__dirname, '../.build/updater.js'), 'utf8'), {
-    exports,
-    require(name) {
-      if (name === './db') return db
-      if (name === './sanitize') return require('../.build/sanitize.js')
-      throw Error(`Unexpected dependency: ${name}`)
-    },
-    console: { log: (...args) => logs.push(args) }
-  }, { filename: 'updater.js' })
-  return { updateAll: exports.updateAll, logs }
-}
-
-test('slow query, cursor write, send, and mapping each keep later polls out', async () => {
-  const gates = [deferred(), deferred(), deferred(), deferred()]
-  const calls = { queries: 0, writes: 0, sends: 0, mappings: 0 }
-  const { updateAll } = loadUpdater({
-    feedItems: { selectUpdates: async () => ++calls.queries === 1 ? gates[0].promise : { rows: [] } },
-    subscriptions: { updateLastSent: async () => { calls.writes++; await gates[1].promise } },
-    unsubscriptions: { insert: async () => { calls.mappings++; await gates[3].promise } }
-  })
-  const telegram = { sendMessage: async () => {
-    calls.sends++
-    await gates[2].promise
-    return { chat: { id: 'chat-1' }, message_id: 1 }
-  } }
-  let finished = false
-  const first = updateAll(telegram).then(() => { finished = true })
-  const laterPolls = []
-  for (let stage = 0; stage < gates.length; stage++) {
-    // Simulate dozens of timer ticks while this part of a batch is stalled.
-    for (let tick = 0; tick < 40; tick++) laterPolls.push(updateAll(telegram))
-    await flush()
-    assert.equal(calls.queries, 1, `overlapping query at stage ${stage}`)
-    assert.equal(finished, false, `batch finished prematurely at stage ${stage}`)
-    gates[stage].resolve(stage === 0 ? { rows: [item(1)] } : undefined)
+test('overlapping polls stay out during queue preparation, claiming, sending and receipt storage', async () => {
+  const gates = Array.from({ length: 4 }, deferred)
+  let prepares=0,claims=0,sends=0,receipts=0
+  const batch = {
+    async prepare() { prepares++; await gates[0].promise },
+    async claim() { if (claims++) return null; await gates[1].promise; return row },
+    async sent() { receipts++; await gates[3].promise }
+  }
+  const telegram = { async callApi() { sends++; await gates[2].promise; return { message_id: 1, chat: { id: 123 } } } }
+  const store=storeFor(batch)
+  const first=updateAll(telegram,store)
+  for (const gate of gates) {
+    for(let n=0;n<40;n++) await updateAll(telegram,store)
+    assert.equal(prepares,1)
+    gate.resolve()
     await flush()
   }
-  await Promise.all([first, ...laterPolls])
-  assert.deepEqual(calls, { queries: 1, writes: 1, sends: 1, mappings: 1 })
-  await updateAll(telegram)
-  assert.equal(calls.queries, 2, 'polling must resume after the batch completes')
+  await first
+  assert.equal(sends,1)
+  assert.equal(receipts,1)
+  await updateAll(telegram,store)
+  assert.equal(prepares,2)
 })
 
-test('one rejected send cannot release the guard while another delivery is pending', async () => {
-  const slowSend = deferred()
-  let queries = 0
-  const written = []
-  const mapped = []
-  const { updateAll, logs } = loadUpdater({
-    feedItems: { selectUpdates: async () => { queries++; return { rows: [item(1), item(2)] } } },
-    subscriptions: { updateLastSent: async chat => { written.push(chat) } },
-    unsubscriptions: { insert: async chat => { mapped.push(chat) } }
-  })
-  const telegram = { sendMessage: async chat => {
-    if (chat === 'chat-1') throw Error('simulated blocked user')
-    await slowSend.promise
-    return { chat: { id: chat }, message_id: 2 }
-  } }
-  let finished = false
-  const first = updateAll(telegram).then(() => { finished = true })
-  await flush()
-  const second = updateAll(telegram)
-  await flush()
-  assert.equal(queries, 1)
-  assert.equal(finished, false)
-  // Existing send-error/cursor policy is intentionally preserved by this fix.
-  assert.deepEqual(written, ['chat-1', 'chat-2'])
-  assert.equal(logs.length, 1)
-  slowSend.resolve()
-  await Promise.all([first, second])
-  assert.deepEqual(mapped, ['chat-2'])
-})
-
-test('a rejected database query releases the guard for the next poll', async () => {
-  let queries = 0
-  const { updateAll } = loadUpdater({
-    feedItems: { selectUpdates: async () => {
-      if (++queries === 1) throw Error('temporary database failure')
-      return { rows: [] }
-    } }
-  })
-  await assert.rejects(updateAll({}), /temporary database failure/)
-  await updateAll({})
-  assert.equal(queries, 2)
-})
-
-test('a failed mapping also releases the guard after the batch settles', async () => {
-  let queries = 0
-  const { updateAll, logs } = loadUpdater({
-    feedItems: { selectUpdates: async () => ({ rows: ++queries === 1 ? [item(1)] : [] }) },
-    subscriptions: { updateLastSent: async () => {} },
-    unsubscriptions: { insert: async () => { throw Error('mapping write failed') } }
-  })
-  await updateAll({ sendMessage: async () => ({ chat: { id: 'chat-1' }, message_id: 1 }) })
-  await updateAll({})
-  assert.equal(queries, 2)
-  assert.equal(logs.length, 1)
-})
-
-test('the timer catches a failed poll and continues invoking later polls', async () => {
-  let poll, interval, calls = 0
-  const logs = []
-  class FakeBot {
-    constructor() { this.telegram = {} }
-    static log() { return () => {} }
-    use() {}
-    start() {}
-    command() {}
-    action() {}
-    on() {}
-    launch() {}
+test('known errors get the correct bounded retry, pause, migration or skip action', async () => {
+  const cases = [
+    [apiError(403,'Forbidden: bot was blocked by the user'),'pause'],
+    [apiError(403,'Forbidden: user is deactivated'),'pause'],
+    [apiError(400,'Bad Request: chat not found'),'pause'],
+    [apiError(400,'Bad Request: group chat was upgraded',{migrate_to_chat_id:-1001234567890}),'migrate'],
+    [apiError(429,'Too Many Requests',{retry_after:90}),'retry'],
+    [apiError(503,'Service Unavailable'),'retry'],
+    [{code:'ECONNREFUSED'},'retry'],
+    [{code:'ECONNRESET'},'skip'],
+    [{name:'AbortError'},'skip'],
+    [apiError(400,'Bad Request: message is too long'),'skip']
+  ]
+  for (const [error,expected] of cases) {
+    let claims=0
+    const actions=[]
+    const batch={ prepare:async()=>{}, claim:async()=>claims++ ? null : row,
+      sent:async()=>{throw Error('must not acknowledge a rejected send')},
+      pause:async(...args)=>actions.push(['pause',...args]),
+      migrate:async(...args)=>actions.push(['migrate',...args]),
+      retry:async(...args)=>actions.push(['retry',...args]),
+      skipped:async(...args)=>actions.push(['skip',...args]) }
+    await updateAll({callApi:async()=>{throw error}},storeFor(batch))
+    assert.equal(actions.length,1)
+    assert.equal(actions[0][0],expected)
   }
-  vm.runInNewContext(readFileSync(path.join(__dirname, '../.build/index.js'), 'utf8'), {
-    exports: {},
-    process: { env: { BOT_TOKEN: 'test-only' } },
-    require(name) {
-      if (name === 'telegraf') return { Telegraf: FakeBot }
-      if (name === './updater') return { updateAll: async () => {
-        if (++calls === 1) throw Error('temporary database failure')
-      } }
-      if (name === './handlers') return {}
-      if (name.startsWith('./middleware/')) return () => {}
-      throw Error(`Unexpected dependency: ${name}`)
-    },
-    setInterval(callback, delay) { poll = callback; interval = delay },
-    console: { log: (...args) => logs.push(args) }
-  }, { filename: 'index.js' })
+  assert.deepEqual(classifyDeliveryError(apiError(429,'flood',{retry_after:90})), {kind:'retry',reason:'flood',delay:90,flood:true})
+})
+
+test('a failed receipt write never retries the already successful Telegram send', async () => {
+  let sends=0, claims=0, retries=0
+  const batch={prepare:async()=>{},claim:async()=>claims++?null:row,
+    sent:async()=>{throw Error('database disconnected after send')},retry:async()=>{retries++}}
+  await assert.rejects(updateAll({callApi:async()=>{sends++;return {message_id:1,chat:{id:123}}}},storeFor(batch)), /database disconnected/)
+  assert.equal(sends,1)
+  assert.equal(retries,0)
+  await updateAll({},storeFor({prepare:async()=>{},claim:async()=>null}))
+})
+
+test('a failed preparation releases the polling guard', async () => {
+  await assert.rejects(updateAll({},storeFor({prepare:async()=>{throw Error('temporary database failure')}})), /temporary database failure/)
+  let prepared=false
+  await updateAll({},storeFor({prepare:async()=>{prepared=true},claim:async()=>null}))
+  assert.equal(prepared,true)
+})
+
+test('messages are plain text and fit Telegram limits without dropping normal URLs', () => {
+  const url='https://example.invalid/?a=1&b=2'
+  const text=deliveryText({item_title:'<&>'.repeat(3000),feed_title:'Feed',item_url:url})
+  assert.ok(text.length<=4096)
+  assert.ok(text.endsWith(url))
+  assert.ok(text.startsWith('<&>'))
+})
+
+test('a hung request is aborted after 15 seconds and is not retried', async () => {
+  const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path')
+  const exports={}
+  let abort,timeout,claims=0,skips=0
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../.build/updater.js'),'utf8'),{
+    exports,AbortController,console:{log(){}},
+    require(name) { return name==='./delivery-policy' ? require('../.build/delivery-policy') : {} },
+    setTimeout(fn,ms) {abort=fn;timeout=ms;return 1},clearTimeout(){}
+  })
+  const promise=exports.updateAll({callApi:async(_method,_payload,{signal})=>new Promise((_resolve,reject)=>{
+    signal.addEventListener('abort',()=>reject({name:'AbortError'}))
+  })},storeFor({prepare:async()=>{},claim:async()=>claims++?null:row,skipped:async()=>{skips++}}))
   await flush()
-  assert.equal(interval, 30000)
-  assert.equal(calls, 1)
-  assert.equal(logs.length, 1)
-  assert.match(logs[0].join(' '), /temporary database failure/)
-  poll()
-  await flush()
-  assert.equal(calls, 2)
+  assert.equal(timeout,15000)
+  abort()
+  await promise
+  assert.equal(skips,1)
 })

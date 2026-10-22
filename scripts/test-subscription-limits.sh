@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 bot_image=${1:-greader-bot:latest}
 db_container="greader-limits-test-$$"
-trap 'docker rm -f "$db_container" >/dev/null 2>&1 || true' EXIT
+trap 'docker rm -fv "$db_container" >/dev/null 2>&1 || true' EXIT
 docker run -d --name "$db_container" --network none \
   -e POSTGRES_USER=docker -e POSTGRES_DB=greader_limits_test -e POSTGRES_HOST_AUTH_METHOD=trust postgres:15 >/dev/null
 for attempt in {1..30}; do
@@ -22,3 +22,7 @@ docker run --rm --network "container:$db_container" \
   -e PGHOST=127.0.0.1 -e PGUSER=docker -e PGDATABASE=greader_limits_test -e TEST_SUBSCRIPTION_LIMITS=1 \
   -v "$PWD/bot/test:/app/test:ro" -v "$PWD/api:/api:ro" \
   "$bot_image" sh -c 'node --test test/*.test.cjs'
+docker exec -i "$db_container" psql -U docker -d greader_limits_test < migrations/002-delivery-state.sql >/dev/null
+docker run --rm --network "container:$db_container" \
+  -e PGHOST=127.0.0.1 -e PGUSER=docker -e PGDATABASE=greader_limits_test -e TEST_DELIVERY_STATE=1 \
+  -v "$PWD/bot/test:/app/test:ro" "$bot_image" node --test test/delivery-database.test.cjs

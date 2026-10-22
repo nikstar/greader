@@ -4,11 +4,13 @@ import { updateAll } from './updater'
 import loggerMiddleware from './middleware/logger'
 import userInfoMiddleware from './middleware/user_info'
 import ownerOnly from './middleware/owner_only'
+import deliveryLifecycle from './middleware/delivery_lifecycle'
 
 const bot = new Telegraf(process.env.BOT_TOKEN)
 
 bot.use(Telegraf.log())
 bot.use(userInfoMiddleware)
+bot.use(deliveryLifecycle)
 bot.use(loggerMiddleware)
 
 bot.start(handleStart)
@@ -36,6 +38,6 @@ const pollUpdates = () => {
 }
 
 pollUpdates()
-setInterval(pollUpdates, 30 * 1000)
+setInterval(pollUpdates, 1000)
 
 bot.launch()

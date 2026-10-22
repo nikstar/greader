@@ -1,17 +1,22 @@
 import Ctx from '../ctx'
 import * as DB from '../db'
+import { deliveryStore } from '../delivery-store'
 
 export const handleHealth = async (ctx: Ctx) => { 
   const users = await DB.users.count();
   const subscriptions = await DB.subscriptions.activeCount();
   const feedItems = await DB.feedItems.count();
   const totalSize = await DB.feedItems.totalSize();   
+  const delivery = await deliveryStore.health()
   
   let report = `
   Users: <b>${users}</b>
 Subscriptions: <b>${subscriptions}</b>
 Feed items: <b>${feedItems}</b>
-Database size: <b>${totalSize}</b>`
+Database size: <b>${totalSize}</b>
+Paused chats: <b>${delivery.paused_chats}</b>
+Pending deliveries: <b>${delivery.pending}</b>
+Skipped deliveries (24h): <b>${delivery.skipped_24h}</b>`
   try {
     const resp = await fetch(`http://${process.env.CRAWLER_HOST}:9090/crawl?url=https://xkcd.com/atom.xml`)
     if (resp.status != 200) {
