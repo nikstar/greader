@@ -141,6 +141,7 @@ export const handleSingleSubscription = async (ctx: Ctx, url: string) => {
       str += `→ <a href="${item.url}">${sanitize(item.title)}</a>\n`
     })
     if (items.length) str += `\nLatest post:`
+    else str += `\n\nEmpty feed`
     const msg = await ctx.reply(str, { parse_mode: 'HTML', disable_web_page_preview: false })
     await DB.unsubscriptions.insert(msg.chat.id, msg.message_id, subscription_id)
   

@@ -72,6 +72,7 @@ async function main() {
     await handleSingleSubscription(context(`${name}-user`), feedUrl(name))
     const reply = replies[replies.length - 1]
     assert.match(reply.text, /^Subscribed to /)
+    assert.match(reply.text, /\n\nEmpty feed$/)
     assert.ok(!reply.text.includes('Recent posts:'))
     const result = await pool.query(`SELECT f.id,f.title,f.most_recent_item,s.active,s.delivery_cursor,
       (SELECT count(*) FROM feed_items WHERE feed_id=f.id) AS items,
