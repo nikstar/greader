@@ -19,9 +19,6 @@ func fetchFeed(f *Feed) (*gofeed.Feed, error) {
 		normalizeItem(f.url, item)
 	}
 	items := recentItems(feed)
-	if len(items) == 0 {
-		return feed, nil // todo error
-	}
 	f.id, err = storeFeed(f.url, feed.Title, items)
 	return feed, err
 }

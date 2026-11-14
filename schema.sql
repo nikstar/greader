@@ -109,7 +109,7 @@ CREATE TABLE public.feeds (
     title text NOT NULL,
     last_update_time timestamp with time zone NOT NULL,
     next_update_time timestamp with time zone NOT NULL,
-    most_recent_item timestamp with time zone NOT NULL
+    most_recent_item timestamp with time zone
 );
 
 

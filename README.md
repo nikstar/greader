@@ -108,6 +108,7 @@ Follow these steps to run a custom instance. Remember to modify urls of your web
     ```bash
     docker compose exec -T postgres psql -U docker -d greader -v owner_chat_id=YOUR_TELEGRAM_USER_ID < migrations/001-subscription-limits.sql
     docker compose exec -T postgres psql -U docker -d greader < migrations/002-delivery-state.sql
+    docker compose exec -T postgres psql -U docker -d greader < migrations/003-empty-feeds.sql
     ```
 
     Each chat is limited to 100 active subscriptions. Set `owner_chat_id` to the same private user ID as `OWNER_ID`; only this chat is exempt. The database enforces the limit for bot commands, OPML imports, and API resubscriptions, including concurrent requests. Existing over-limit chats keep their subscriptions until an administrator handles them; the migration does not unsubscribe anyone. The `subscription_limits` counters are maintained by triggers and should not be edited manually.
@@ -123,6 +124,8 @@ Follow these steps to run a custom instance. Remember to modify urls of your web
 Run the bot's unit tests with `cd bot && npm test`. After building the bot image, run `bash scripts/test-subscription-limits.sh greader-bot:latest` from the repository root to test the migration, concurrent activations, imports, and owner exemption in a disposable Postgres container. This test does not access the production database or Telegram.
 
 ## Delivery behavior
+
+Valid empty RSS and Atom feeds can be subscribed to and imported. The crawler stores their metadata and polls them normally; `most_recent_item` is null until a post appears. An empty response from a previously populated feed preserves its last known post date and stored items. Apply migration 003 before deploying the updated crawler; it only makes that date optional. Run `bash scripts/test-empty-feeds.sh greader-crawler:latest greader-bot:latest` to exercise subscription, import, empty polling, and the first later post through the real crawler, bot handlers, and a disposable Postgres database. Only the Telegram transport is simulated.
 
 The crawler deduplicates by GUID and also by an exact match of title, URL, and publication date within the same feed. This prevents publishers that regenerate GUIDs on every request from creating repeated notifications. A shared URL alone does not suppress an item with a different title or date. Feed writes are transactional and serialized per feed so concurrent crawls cannot insert copies. This check uses retained feed items; it is not a permanent archive of every item ever seen. Run `bash scripts/test-crawler.sh greader-crawler:latest` after building the crawler image to test this against disposable Postgres, including a changing-GUID error feed and concurrent crawls.
 

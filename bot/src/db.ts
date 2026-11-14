@@ -122,7 +122,7 @@ class SubscriptionsTable extends Table {
       JOIN feeds AS f ON 
         s.feed_id = f.id 
       WHERE s.chat_id = $1 AND active 
-      ORDER BY most_recent_item DESC;`, 
+      ORDER BY most_recent_item DESC NULLS LAST;`,
       [id]
     )
     return res.rows.flatMap(row => row as Feed)

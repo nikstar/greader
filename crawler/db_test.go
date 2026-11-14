@@ -50,6 +50,58 @@ func TestFeedDeduplication(t *testing.T) {
 		return id
 	}
 
+	for name, body := range map[string]string{
+		"Atom": `<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><id>urn:empty</id><title>Empty feed</title><updated>2026-11-14T00:00:00Z</updated><author><name>Test</name></author></feed>`,
+		"RSS":  `<?xml version="1.0"?><rss version="2.0"><channel><title>Empty feed</title><link>https://example.invalid/</link><description>No posts yet</description></channel></rss>`,
+	} {
+		t.Run("empty "+name+" stores metadata and refreshes the poll schedule", func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/xml")
+				fmt.Fprint(w, body)
+			}))
+			defer server.Close()
+			f := &Feed{url: server.URL}
+			if _, err := fetchFeed(f); err != nil {
+				t.Fatal(err)
+			}
+			if f.id <= 0 {
+				t.Fatalf("empty feed returned invalid id %d", f.id)
+			}
+			id := f.id
+			if _, err := db.Exec(context.Background(), "UPDATE feeds SET next_update_time=now()-interval '1 minute' WHERE id=$1", id); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := fetchFeed(f); err != nil {
+				t.Fatal(err)
+			}
+			var title string
+			var noPosts, scheduled bool
+			if err := db.QueryRow(context.Background(), "SELECT title,most_recent_item IS NULL,next_update_time>now() FROM feeds WHERE id=$1", f.id).Scan(&title, &noPosts, &scheduled); err != nil {
+				t.Fatal(err)
+			}
+			if f.id != id || title != "Empty feed" || !noPosts || !scheduled {
+				t.Fatalf("unexpected empty feed: id=%d title=%q noPosts=%v scheduled=%v", f.id, title, noPosts, scheduled)
+			}
+			countItems(t, f.id, 0)
+		})
+	}
+
+	t.Run("an empty response preserves existing items and the latest post date", func(t *testing.T) {
+		const url = "https://example.invalid/temporarily-empty"
+		id := store(t, url, item("existing"))
+		if got := store(t, url); got != id {
+			t.Fatalf("empty crawl changed feed id from %d to %d", id, got)
+		}
+		countItems(t, id, 1)
+		var latest time.Time
+		if err := db.QueryRow(context.Background(), "SELECT most_recent_item FROM feeds WHERE id=$1", id).Scan(&latest); err != nil {
+			t.Fatal(err)
+		}
+		if !latest.Equal(date) {
+			t.Fatalf("empty crawl changed latest post date to %v", latest)
+		}
+	})
+
 	t.Run("changing GUID in Point-Free style error RSS", func(t *testing.T) {
 		var requests int32
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

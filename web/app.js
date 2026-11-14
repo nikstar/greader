@@ -117,7 +117,7 @@ const loadSubscriptions = async () => {
                         ${sub.url}
                     </a>
                     <div class="dates"> 
-                        <div> Most recent ${formatTimeAgo(sub.most_recent_item)} </div>
+                        <div> ${sub.most_recent_item ? `Most recent ${formatTimeAgo(sub.most_recent_item)}` : 'No posts yet'} </div>
                         <div> Sent ${formatTimeAgo(sub.last_sent)} </div>
                         <div> Checked ${formatTimeAgo(sub.last_update_time)} </div>
                     </div>

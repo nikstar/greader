@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -36,7 +37,7 @@ const (
 			title = EXCLUDED.title, 
 			last_update_time = EXCLUDED.last_update_time, 
 			next_update_time = EXCLUDED.next_update_time, 
-			most_recent_item = EXCLUDED.most_recent_item
+			most_recent_item = COALESCE(EXCLUDED.most_recent_item, feeds.most_recent_item)
 	RETURNING (id);
 	`
 )
@@ -55,8 +56,14 @@ func storeFeed(feed string, title string, items []*gofeed.Item) (int64, error) {
 	}
 	defer tx.Rollback(ctx)
 
+	// An empty feed has no latest post yet. Keep a known date if a publisher
+	// temporarily returns no entries, and never invent an item or timestamp.
+	var mostRecentItem *time.Time
+	if len(items) > 0 {
+		mostRecentItem = items[len(items)-1].PublishedParsed
+	}
 	var id int64
-	err = tx.QueryRow(ctx, stmntInsertNewFeedOrUpdate, feed, title, items[len(items)-1].PublishedParsed).Scan(&id)
+	err = tx.QueryRow(ctx, stmntInsertNewFeedOrUpdate, feed, title, mostRecentItem).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("store feed: %w", err)
 	}
