@@ -55,6 +55,38 @@ test('a concurrent activation rejected by the database never sends a subscribed 
   assert.deepEqual(replies, [limit.subscriptionLimitMessage])
 })
 
+test('manual subscriptions preserve the complete feed URL sent to the crawler', async t => {
+  const urls = [
+    'https://example.invalid/feed.xml',
+    'https://wtf.roflcopter.fr/rss-bridge/?action=display&bridge=Instagram&u=cityshor.news&format=Atom',
+    'https://example.invalid/feed?q=C%2B%2B+news&token=a%26b%3Dc&raw=a+b&label=привет#latest'
+  ]
+  for (const feedUrl of urls) {
+    await t.test(feedUrl, async () => {
+      const requests = [], replies = []
+      const db = {
+        subscriptions: { assertCanSubscribe: async () => {}, insertNewOrUpdateLastSent: async () => 1 },
+        feeds: { selectFeedTitle: async () => 'Example' },
+        feedItems: { selectTenMostRecent: async () => [] },
+        unsubscriptions: { insert: async () => {} }
+      }
+      const { handleSingleSubscription } = handler('subscribe', db, async url => {
+        requests.push(new URL(url))
+        return { status: 200, text: async () => '1' }
+      })
+      await handleSingleSubscription({ chat: { id: 1 }, reply: async text => {
+        replies.push(text)
+        return { chat: { id: 1 }, message_id: 1 }
+      } }, feedUrl)
+      assert.equal(requests.length, 1)
+      assert.equal(requests[0].pathname, '/crawl')
+      assert.deepEqual([...requests[0].searchParams.keys()], ['url'])
+      assert.equal(requests[0].searchParams.get('url'), feedUrl)
+      assert.match(replies[0], /^Subscribed to /)
+    })
+  }
+})
+
 test('an import stops at capacity and reports successful and skipped feeds accurately', async () => {
   let active = 99, crawls = 0
   const replies = [], edits = []
@@ -77,6 +109,30 @@ test('an import stops at capacity and reports successful and skipped feeds accur
   assert.match(replies[0], /Found 3 feeds/)
   assert.match(edits[0], /Imported 1 feeds/)
   assert.match(edits[0], /Skipped 2 feeds/)
+})
+
+test('OPML imports preserve query parameters and escapes in crawler requests', async () => {
+  const feedUrl = 'https://example.invalid/feed?action=display&query=C%2B%2B+news&token=a%26b%3Dc#latest'
+  const requests = [], edits = [], subscriptions = []
+  const db = { subscriptions: {
+    assertCanSubscribe: async () => {},
+    insertNewOrActivate: async (...args) => subscriptions.push(args)
+  } }
+  const opml = generateOPML([{ title: 'Example', url: feedUrl }])
+  const { handleImportFile } = handler('import', db, async url => {
+    if (url === 'local-file') return { text: async () => opml }
+    requests.push(new URL(url))
+    return { status: 200, text: async () => '42' }
+  })
+  await handleImportFile({ chat: { id: 1 }, message: { document: { file_id: 'file' } },
+    reply: async () => ({ message_id: 1 }),
+    telegram: { getFileLink: async () => 'local-file', editMessageText: async (...args) => edits.push(args[3]) }
+  })
+  assert.equal(requests.length, 1)
+  assert.deepEqual([...requests[0].searchParams.keys()], ['url'])
+  assert.equal(requests[0].searchParams.get('url'), feedUrl)
+  assert.deepEqual(subscriptions, [[1, 42]])
+  assert.deepEqual(edits, ['Imported 1 feeds.'])
 })
 
 test('the API returns a clear limit error and releases its connection', async () => {

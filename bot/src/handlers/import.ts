@@ -24,7 +24,7 @@ function collectUrls(node: any): string[] {
 async function quickSubscribe(url: string): Promise<number> {
   try {
     const crawlerHost = env['CRAWLER_HOST'] || 'localhost'
-    const resp = await fetch(`http://${crawlerHost}:9090/crawl?url=${url}`)
+    const resp = await fetch(`http://${crawlerHost}:9090/crawl?url=${encodeURIComponent(url)}`)
     if (resp?.status != 200) {
       return 0
     }

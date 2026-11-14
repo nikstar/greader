@@ -77,7 +77,7 @@ async function tryCommonCandidates(pageUrl: string, homepageUrl: string, crawler
 
 async function tryFeedUrl(feedUrl: string, crawlerHost: string): Promise<Response> {
   try {
-    const resp = await fetch(`http://${crawlerHost}:9090/crawl?url=${feedUrl}`)
+    const resp = await fetch(`http://${crawlerHost}:9090/crawl?url=${encodeURIComponent(feedUrl)}`)
     return resp
   } catch (err) {
     console.log(`request to crawler returned error: ${err}`)
